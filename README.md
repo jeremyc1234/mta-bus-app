@@ -1,36 +1,145 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# My MTA Bus App
 
-## Getting Started
+A **Next.js** application that displays real-time bus arrivals near a specific location (Union Square, NYC by default). It features a **carousel of grey tiles** (one per stop), horizontal scrolling, and a countdown timer for automatic refreshes. On **mobile** devices, tiles snap into place; on **desktop**, you can freely scroll. It also shows basic occupancy info if provided by the MTA feed.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+1. **Union Square** as Default Location  
+   - The app uses approximate coordinates for Union Square: `lat=40.7359` / `lon=-73.9906`.  
+   - You can change them in `app/page.tsx`.
+
+2. **Real-Time Bus Data**  
+   - Fetches bus stops and arrivals using the MTA’s **SIRI** APIs.  
+   - Shows how many stops away each bus is, plus an approximate arrival time.
+
+3. **Mobile vs. Desktop Behavior**  
+   - **Mobile**: “Tiles” snap horizontally (carousel style).  
+   - **Desktop**: You can freely scroll horizontally.  
+
+4. **Occupancy Display**  
+   - If the MTA feed provides a `MonitoredVehicleJourney.Occupancy` field, the app shows a short occupancy label (e.g., *“Standing Room Only”*).
+
+5. **Customized UI**  
+   - Grey tiles filling the viewport height (`100vh`).  
+   - Automatic refresh every 30 seconds with a countdown.  
+   - Renders up to **5** closest stops, sorted by distance.  
+   - If a bus is “0 stops away,” it shows “<1 Stop Away.”  
+   - Some simple text like “Other bus routes will appear here if available” if only one route is found.  
+
+6. **Dynamic Light/Dark Mode**  
+   - “Updated” and “Created by Jeremy” text adapt to the user’s system theme.  
+
+## Requirements
+
+- **Node.js** (v14+ recommended)  
+- **npm** or **yarn**  
+
+## Environment Variables
+
+You’ll need an **MTA** API key. In Next.js, you typically set it in `.env.local`:
+
+```
+MTA_API_KEY=YOUR-REAL-MTA-KEY-HERE
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+No other environment variables are strictly required for this setup, but if you integrate **Redis** or other services, set them accordingly (e.g. `REDIS_URL`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Setup & Installation
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Clone** the repository:
+   ```bash
+   git clone https://github.com/<YOUR-USERNAME>/my-mta-app.git
+   cd my-mta-app
+   ```
 
-## Learn More
+2. **Install** dependencies:
+   ```bash
+   npm install
+   ```
+   or
+   ```bash
+   yarn
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+3. **Create** a `.env.local` file to store your MTA API key:
+   ```bash
+   echo "MTA_API_KEY=YOUR-KEY" > .env.local
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+4. **Run** the development server:
+   ```bash
+   npm run dev
+   ```
+   or
+   ```bash
+   yarn dev
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+5. **Open** [http://localhost:3000](http://localhost:3000) in your browser.  
+   - If you’re on mobile, you’ll see tiles snap.  
+   - On desktop, you can horizontally scroll freely.
 
-## Deploy on Vercel
+## Usage
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- The app fetches data from the MTA’s **SIRI** API endpoints (specifically `stops-for-location.json` and `stop-monitoring.json`).  
+- Every **30 seconds**, it re-fetches automatically.  
+- You can see a **countdown** at the top next to the “Updated:” label.  
+- The page displays up to **5** stops near the lat/lon you set. Each tile shows route cards.  
+- **If a route has buses**: You’ll see how many stops away, approximate arrival time, and if `Occupancy` is present, it appears.  
+- **If a route or stop has no arrivals**: “No buses en-route to this stop.”
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Changing the Location
+
+1. Open **`app/page.tsx`**.  
+2. Look for:
+   ```js
+   const FIXED_LAT = 40.7359;
+   const FIXED_LON = -73.9906;
+   ```
+3. Replace them with **your** desired coordinates.  
+4. Restart the dev server (`ctrl + c`, then `npm run dev`) to pick up changes.
+
+## Deployment
+
+### Deploy to Vercel
+
+1. **Push** your code to GitHub.  
+2. **Create** a new project on [Vercel](https://vercel.com/).  
+3. **Import** your GitHub repo.  
+4. In **Vercel Project Settings → Environment Variables**, set:
+   ```
+   MTA_API_KEY=YOUR-REAL-MTA-KEY
+   ```
+5. **Deploy**. The site will build and be hosted on a `.vercel.app` domain.
+
+### Deploy Elsewhere
+
+- You can deploy to any Node.js environment that can run Next.js (e.g., DigitalOcean, AWS).  
+- Make sure to set **`MTA_API_KEY`** in that environment’s config or `.env` equivalent.
+
+## Contributing
+
+1. **Fork** this repo.  
+2. **Create** a feature branch for your changes (`git checkout -b feature/something`).  
+3. **Commit** your changes (`git commit -m "Add new feature"`).  
+4. **Push** to GitHub (`git push`).  
+5. Open a **Pull Request** describing your changes.
+
+## License
+
+You can choose an open-source license you prefer (e.g., MIT, Apache). This is just a placeholder:
+
+```
+MIT License
+Copyright (c) 2023 Jeremy
+Permission is hereby granted, free of charge, to any person obtaining a copy ...
+```
+
+## Acknowledgments
+
+- **MTA** for providing the BusTime API.  
+- **Next.js** for powering the front end.  
+
+---
+
+*Happy coding!* If you have any questions, feel free to open an issue or PR.
