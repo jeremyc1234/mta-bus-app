@@ -19,16 +19,20 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: React.ReactNode
+}) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
-      </body>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <link rel="icon" href="/favicon.ico" />
+        {/* Add Apple Maps Universal Links support */}
+        <meta name="apple-mobile-web-app-title" content="MTA Bus Tracker" />
+        <link rel="apple-touch-icon" href="/icon.png" />
+      </head>
+      <body>{children}</body>
     </html>
-  );
+  )
 }

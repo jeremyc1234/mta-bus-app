@@ -6,7 +6,15 @@
   --background: #ffffff;
   --foreground: #171717;
 }
+:root {
+  --popup-bg: white;
+  --popup-text: black;
+}
 
+[data-theme='dark'] {
+  --popup-bg: #1e1e1e;
+  --popup-text: white;
+}
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -22,4 +30,62 @@ body {
 
 ::-webkit-scrollbar {
   display: none;
+}
+
+/* Dark Mode Dropdown Styling */
+@media (prefers-color-scheme: dark) {
+  .dropdown {
+    background-color: #2d2d2d !important;
+    color: #ffffff !important;
+    border: 1px solid #444444 !important;
+  }
+  .dropdown option {
+    background-color: #2d2d2d !important;
+    color: #ffffff !important;
+  }
+}
+
+/* Mobile-Specific Adjustments */
+@media (max-width: 768px) {
+  .dropdown {
+    width: 90% !important; /* Ensure it fits mobile screens */
+    max-width: 90% !important;
+    font-size: 1rem !important; /* Slightly smaller font for mobile */
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+}
+
+@keyframes progressBar {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+body {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+body.dark {
+  background-color: #1a1a1a;
+  color: #ffffff;
+}
+
+.dark .tile {
+  background-color: #2d2d2d;
+  color: #ffffff;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #cccccc;
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background-color: #555555;
 }

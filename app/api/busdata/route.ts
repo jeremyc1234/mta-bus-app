@@ -1,3 +1,5 @@
+// app/api/busdata/route.ts
+
 import { NextResponse } from 'next/server';
 import { Redis } from 'ioredis';
 
@@ -82,13 +84,13 @@ export async function GET(request: Request) {
     if (cached) {
       return NextResponse.json(JSON.parse(cached));
     }
-
+    
     // 1) Fetch stops from MTA
     const stopsUrl = `http://bustime.mta.info/api/where/stops-for-location.json?lat=${userLat}&lon=${userLon}&radius=500&key=${MTA_API_KEY}`;
     const stopsRes = await fetch(stopsUrl, {
       headers: {
         Accept: 'application/json',
-        'User-Agent': 'MyMTAApp/1.0',
+        'User-Agent': 'MTABusTracker/1.0',
       },
     });
     if (!stopsRes.ok) {
@@ -97,7 +99,6 @@ export async function GET(request: Request) {
       throw new Error(`Stops API returned status ${stopsRes.status}`);
     }
 
-    // Parse stopsData
     const stopsData = await stopsRes.json();
     const stops = stopsData?.data?.stops || [];
 
@@ -109,7 +110,7 @@ export async function GET(request: Request) {
           const arrivalsRes = await fetch(monitoringUrl, {
             headers: {
               Accept: 'application/json',
-              'User-Agent': 'MyMTAApp/1.0',
+              'User-Agent': 'MTABusTracker/1.0',
             },
           });
           if (!arrivalsRes.ok) {
@@ -169,14 +170,17 @@ export async function GET(request: Request) {
 
     // 4) Build final JSON
     const result = {
-      rawStopsData: stopsData,
       stops: computedStops,
       arrivals: arrivalsObj,
-      timestamp: new Date().toISOString(), // stable ISO string
+      timestamp: new Date().toISOString(),
+      location: {
+        lat: userLat,
+        lon: userLon
+      }
     };
 
-    // 5) Save in Redis cache
-    // await redis.set(cacheKey, JSON.stringify(result), 'EX', CACHE_TTL);
+    // 5) Save in Redis cache with short TTL due to real-time nature
+    await redis.set(cacheKey, JSON.stringify(result), 'EX', CACHE_TTL);
 
     // 6) Return as JSON
     return NextResponse.json(result);
