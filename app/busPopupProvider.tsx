@@ -209,51 +209,63 @@ const BusRoutePopup = memo(({
 
   
   const stopsList = useMemo(() => (
-    adjustedStops.map((stop: string, index: number) => (
-      <div
-        key={`${stop}-${index}`}
-        data-stop={stop}
-        style={{
-          fontWeight: "bold",
-          padding: '12px',
-          borderRadius: '8px',
-          backgroundColor:
-            stop === userLocation
-              ? '#FFE4B5' // Highlight closest stop in light orange
-              : index === currentStop
-                ? '#FFEE93' // Highlight MTA provided location in yellow
-                : stop === tileStopName
-                  ? '#e6f7ff' // Highlight tile-selected stop in light blue
-                  : index === estimatedStopIndex
-                    ? '#FFD700' // Highlight our estimated stop in gold
-                    : 'transparent',
-          marginBottom: '8px',
-          transition: 'background-color 0.3s',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-start',
-          justifyContent: 'center',
-        }}
-      >
-        <span>{stop}</span>
-        
-        {index === currentStop && (
-          <span style={{ fontSize: '0.8em', color: '#666', marginTop: '4px' }}>
-            (MTA provided bus location)
-          </span>
-        )}
-        {stop === tileStopName && (
-          <span style={{ fontSize: '0.8em', color: '#666', marginTop: '4px' }}>
-            (Closest stop to you)
-          </span>
-        )}
-        {index === estimatedStopIndex && (
-          <span style={{ fontSize: '0.8em', color: '#666', marginTop: '4px' }}>
-            (Our estimated bus location)
-          </span>
-        )}
-      </div>
-    ))
+    adjustedStops.map((stop: string, index: number) => {
+      const isUserStop = stop === userLocation;
+      const isCurrentStop = index === currentStop;
+      const isTileStop = stop === tileStopName;
+      const isEstimatedStop = index === estimatedStopIndex;
+  
+      let backgroundColor = 'transparent';
+  
+      if (isUserStop && isCurrentStop) {
+        backgroundColor = '#e6f7ff'; // Light blue when closest stop and MTA-provided stop match
+      } else if (isUserStop) {
+        backgroundColor = '#e6f7ff'; // Light orange for closest stop
+      } else if (isCurrentStop) {
+        backgroundColor = '#FFEE93'; // Yellow for MTA-provided stop
+      } else if (isTileStop) {
+        backgroundColor = '#e6f7ff'; // Light blue for tile-selected stop
+      } else if (isEstimatedStop) {
+        backgroundColor = '#FFD700'; // Gold for estimated stop
+      }
+  
+      return (
+        <div
+          key={`${stop}-${index}`}
+          data-stop={stop}
+          style={{
+            fontWeight: 'bold',
+            padding: '12px',
+            borderRadius: '8px',
+            backgroundColor,
+            marginBottom: '8px',
+            transition: 'background-color 0.3s',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+          }}
+        >
+          <span>{stop}</span>
+  
+          {isCurrentStop && (
+            <span style={{ fontSize: '0.8em', color: '#666', marginTop: '4px' }}>
+              (MTA provided bus location)
+            </span>
+          )}
+          {isTileStop && (
+            <span style={{ fontSize: '0.8em', color: '#666', marginTop: '4px' }}>
+              (Closest stop to you)
+            </span>
+          )}
+          {isEstimatedStop && (
+            <span style={{ fontSize: '0.8em', color: '#666', marginTop: '4px' }}>
+              (Our estimated bus location)
+            </span>
+          )}
+        </div>
+      );
+    })
   ), [adjustedStops, userLocation, currentStop, tileStopName, estimatedStopIndex]);
   
 const handleOverlayClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -349,64 +361,65 @@ useEffect(() => {
           {/* Inside BusRoutePopup component */}
           <div style={{ display: 'flex', gap: '20px', height: 'auto', minHeight: '100%' }}>
   {/* Bus Icon and Rainbow */}
-  <div style={{ 
-    display: 'flex', 
-    flexDirection: 'column',
-    position: 'relative',
-    marginLeft: '5px', // Slightly shifted to the left
-    marginRight: '10px',
-    alignItems: 'center'
+<div style={{ 
+  display: 'flex', 
+  flexDirection: 'column',
+  position: 'relative',
+  marginLeft: '5px',
+  marginRight: '10px',
+  alignItems: 'center'
+}}>
+  {/* Bus Icon */}
+  <div style={{
+    position: 'absolute',
+    top: showDriveAnimation ? '0%' : `${busPosition}%`,
+    width: '40px',
+    height: '150px',
+    transform: 'translateY(-50%)',
+    zIndex: 2,
+    left: '0px', // Align bus and rainbow to the same starting point
+    transition: 'top 1s ease-in-out',
   }}>
-    {/* Bus Icon */}
+    <style>{RainbowAnimation}</style>
+    {/* Rainbow Trail */}
     <div style={{
-        position: 'absolute',
-        top: showDriveAnimation ? '0%' : `${busPosition}%`,
-        width: '40px',
-        height: '150px',
-        transform: 'translateY(-50%)',
-        zIndex: 2,
-        left: '-5px',
-        transition: 'top 1s ease-in-out',
-      }}>
-      <style>{RainbowAnimation}</style>
-      {/* Rainbow Trail */}
-      <div style={{
-        width: '20px',
-        height: '405px',
-        top: '-400px',
-        left: '10px', // Adjusted for alignment
-        background: `linear-gradient(${isGoingUp ? '0deg' : '180deg'}, 
-          rgba(255,0,0,1) 0%, 
-          rgba(255,154,0,1) 10%, 
-          rgba(208,222,33,1) 20%, 
-          rgba(79,220,74,1) 30%, 
-          rgba(63,218,216,1) 40%, 
-          rgba(47,201,226,1) 50%, 
-          rgba(28,127,238,1) 60%, 
-          rgba(95,21,242,1) 70%, 
-          rgba(186,12,248,1) 80%, 
-          rgba(251,7,217,1) 90%, 
-          rgba(255,0,0,1) 100%)`,
-        backgroundSize: '100% 200%',
-        animation: 'rainbowMove 2s linear infinite',
-        position: 'absolute',
-        zIndex: 1,
-        WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 30%)',
-        maskImage: 'linear-gradient(to bottom, transparent, black 30%)'
-      }} />
-      <img
-        src={busIcon}
-        alt={isGoingUp ? 'Bus going up' : 'Bus going down'}
-        style={{
-          width: '80px',
-          height: '120px',
-          objectFit: 'contain',
-          position: 'relative',
-          zIndex: 3,
-        }}
-      />
-    </div>
+      width: '20px',
+      height: '405px',
+      top: '-400px',
+      left: '0px', // Ensure alignment with the bus icon
+      background: `linear-gradient(${isGoingUp ? '0deg' : '180deg'}, 
+        rgba(255,0,0,1) 0%, 
+        rgba(255,154,0,1) 10%, 
+        rgba(208,222,33,1) 20%, 
+        rgba(79,220,74,1) 30%, 
+        rgba(63,218,216,1) 40%, 
+        rgba(47,201,226,1) 50%, 
+        rgba(28,127,238,1) 60%, 
+        rgba(95,21,242,1) 70%, 
+        rgba(186,12,248,1) 80%, 
+        rgba(251,7,217,1) 90%, 
+        rgba(255,0,0,1) 100%)`,
+      backgroundSize: '100% 200%',
+      animation: 'rainbowMove 2s linear infinite',
+      position: 'absolute',
+      zIndex: 1,
+      WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 30%)',
+      maskImage: 'linear-gradient(to bottom, transparent, black 30%)'
+    }} />
+    <img
+      src={busIcon}
+      alt={isGoingUp ? 'Bus going up' : 'Bus going down'}
+      style={{
+        width: '80px',
+        height: '120px',
+        objectFit: 'contain',
+        position: 'relative',
+        zIndex: 3,
+        marginLeft: '-30px' // Slight adjustment to nudge the bus leftwards
+      }}
+    />
   </div>
+</div>
 
   {/* Blue Line */}
   <div style={{

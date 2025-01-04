@@ -5,85 +5,28 @@ import { FaArrowLeft, FaArrowRight } from "react-icons/fa";
 import { useLockBodyScroll } from '@uidotdev/usehooks';
 import { BusPopupProvider, BusContent } from './busPopupProvider';
 import { Inter } from 'next/font/google';
+import LocationDropdown from './locationDropdown';
+import LocationChangeAnimation from "./locationChangeAnimation";
 
 const inter = Inter({ subsets: ['latin'] });
 
-const BUS_STOP_LOCATIONS = [
-  // Manhattan
-  { label: "Union Square", secondaryLabel: "default", lat: 40.7359, lon: -73.9906 },
-  { label: "Times Square", lat: 40.7580, lon: -73.9855 },
-  { label: "Central Park", lat: 40.7851, lon: -73.9683 },
-  { label: "Statue of Liberty", lat: 40.6892, lon: -74.0445 },
-  { label: "Empire State Building", lat: 40.7488, lon: -73.9857 },
-  { label: "Wall Street", lat: 40.7074, lon: -74.0113 },
-  { label: "Grand Central Terminal", lat: 40.7527, lon: -73.9772 },
-  { label: "Rockefeller Center", lat: 40.7587, lon: -73.9787 },
-  { label: "One World Trade Center", lat: 40.7127, lon: -74.0134 },
-  { label: "The High Line", lat: 40.7479, lon: -74.0048 },
-  { label: "Bryant Park", lat: 40.7536, lon: -73.9832 },
-  { label: "St. Patrick's Cathedral", lat: 40.7585, lon: -73.9759 },
-  { label: "Fifth Avenue Shopping District", lat: 40.7603, lon: -73.9755 },
-  { label: "Chrysler Building", lat: 40.7516, lon: -73.9755 },
-  { label: "Metropolitan Museum of Art", lat: 40.7794, lon: -73.9632 },
-  { label: "American Museum of Natural History", lat: 40.7813, lon: -73.9730 },
-  { label: "Museum of Modern Art (MoMA)", lat: 40.7614, lon: -73.9776 },
-  { label: "Broadway Theater District", lat: 40.7590, lon: -73.9845 },
-  { label: "Madison Square Garden", lat: 40.7505, lon: -73.9934 },
-  { label: "Little Italy", lat: 40.7191, lon: -73.9973 },
-  { label: "Chinatown", lat: 40.7158, lon: -73.9970 },
-  { label: "Battery Park", lat: 40.7033, lon: -74.0170 },
-  { label: "Chelsea Market", lat: 40.7424, lon: -74.0060 },
-  { label: "SoHo", lat: 40.7233, lon: -74.0020 },
-  { label: "Washington Square Park", lat: 40.7308, lon: -73.9973 },
-
-  // Brooklyn
-  { label: "Brooklyn Bridge", lat: 40.7061, lon: -73.9969 },
-  { label: "Prospect Park", lat: 40.6602, lon: -73.9690 },
-  { label: "Brooklyn Museum", lat: 40.6712, lon: -73.9636 },
-  { label: "DUMBO", lat: 40.7033, lon: -73.9894 },
-  { label: "Coney Island", lat: 40.5749, lon: -73.9850 },
-  { label: "Barclays Center", lat: 40.6826, lon: -73.9752 },
-  { label: "Brooklyn Botanic Garden", lat: 40.6676, lon: -73.9632 },
-
-  // Queens
-  { label: "Flushing Meadows-Corona Park", lat: 40.7498, lon: -73.8408 },
-  { label: "Citi Field", lat: 40.7571, lon: -73.8458 },
-  { label: "Astoria Park", lat: 40.7795, lon: -73.9220 },
-  { label: "Rockaway Beach", lat: 40.5795, lon: -73.8351 },
-  { label: "JFK Airport", lat: 40.6413, lon: -73.7781 },
-  { label: "Gantry Plaza State Park", lat: 40.7479, lon: -73.9565 },
-
-  // The Bronx
-  { label: "Yankee Stadium", lat: 40.8296, lon: -73.9262 },
-  { label: "Bronx Zoo", lat: 40.8506, lon: -73.8769 },
-  { label: "New York Botanical Garden", lat: 40.8623, lon: -73.8770 },
-  { label: "Fordham University", lat: 40.8610, lon: -73.8857 },
-  { label: "Pelham Bay Park", lat: 40.8719, lon: -73.8065 },
-
-  // Staten Island
-  { label: "Staten Island Ferry Terminal", lat: 40.6437, lon: -74.0733 },
-  { label: "Staten Island Zoo", lat: 40.6257, lon: -74.1152 },
-  { label: "Richmond Town", lat: 40.5706, lon: -74.1455 },
-  { label: "Staten Island Greenbelt", lat: 40.5921, lon: -74.1160 },
-
-  // Random
-  { label: "Governors Island", lat: 40.6895, lon: -74.0169 },
-  { label: "Ellis Island", lat: 40.6995, lon: -74.0396 },
-  { label: "Roosevelt Island Tramway", lat: 40.7614, lon: -73.9493 },
-
-  // Other
-  { label: "Other (Enter Address)", lat: null, lon: null }
-];
+interface DropdownProps {
+  isOpen: boolean;
+  onClose: () => void;
+  target: React.ReactNode;
+  children: React.ReactNode;
+}
 
 export default function Home() {
   // Union Square fallback lat/lon
   const FALLBACK_LAT = 40.7359;
   const FALLBACK_LON = -73.9906;
 
-  const [windowWidth, setWindowWidth] = useState(0);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 0);
 
   const [locationServicesEnabled, setLocationServicesEnabled] = useState(false);
   const [isBannerVisible, setIsBannerVisible] = useState<boolean>(true);
+  const [selectedStop, setSelectedStop] = useState<string | null>(null);
 
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -92,139 +35,40 @@ export default function Home() {
     lat: FALLBACK_LAT,
     lon: FALLBACK_LON
   });
-  const [usingFallback, setUsingFallback] = useState<boolean>(true);
+  
+  const [isFadingOut, setIsFadingOut] = useState(false);
 
   const refreshInterval = 30000;
   const [timeRemaining, setTimeRemaining] = useState<number>(refreshInterval / 1000);
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const lastUpdateRef = useRef<number>(Date.now());
-
-  const [selectedStop, setSelectedStop] = useState<string>("Union Square");
   const [isStopLoading, setIsStopLoading] = useState<boolean>(false);
-  const [customAddress, setCustomAddress] = useState<string>("");
-  const [isUsingCustomAddress, setIsUsingCustomAddress] = useState<boolean>(false);
-
-  const [isEditing, setIsEditing] = useState(false);
+  
   const [tempAddress, setTempAddress] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const [showDropdownArrow, setShowDropdownArrow] = useState<boolean>(true);
   const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
-
-  const [selectedBusInfo, setSelectedBusInfo] = useState<{
-    route: string;
-    stops: string[];
-    currentStop: number;
-    destination: string;
-  } | null>(null);
-
-  const [routeStops, setRouteStops] = useState<string[]>([]);
-
-
-  const handleStopChange = async (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedLabel = event.target.value;
-
-    if (selectedLabel === "Other (Enter Address)") {
-      setIsEditing(true);
-      setTempAddress("");
-      setTimeout(() => {
-        if (inputRef.current) {
-          inputRef.current.focus();
-        }
-      }, 0);
-      return;
-    }
-
-    setSelectedStop(selectedLabel);
-    setIsEditing(false);
-
-    const selected = BUS_STOP_LOCATIONS.find((stop) => stop.label === selectedLabel);
-    if (selected && selected.lat && selected.lon) {
-      setLocation({ lat: selected.lat, lon: selected.lon });
-      setUsingFallback(false);
-
-      // Fetch updated stop information without full reload
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/busdata?lat=${selected.lat}&lon=${selected.lon}`);
-        if (!res.ok) {
-          const text = await res.text();
-          console.error("Server error:", res.status, text);
-          throw new Error(`Server responded with ${res.status}`);
-        }
-        const json = await res.json();
-        if (json.error) {
-          setError(json.error);
-        } else {
-          setData(json);
-          lastUpdateRef.current = Date.now();
-          setTimeRemaining(refreshInterval / 1000);
-        }
-      } catch (err: any) {
-        console.error("Fetch error:", err);
-        setError("Failed to load bus data.");
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
+  const [isInvalidAddress, setIsInvalidAddress] = useState<boolean>(false);
+  
+  const [isChangingLocation, setIsChangingLocation] = useState(false);
+  const timerRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener('resize', handleResize);
-    handleResize();
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-  const handleAddressSubmit = async () => {
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(tempAddress)}`
-      );
-      const data = await response.json();
-      if (data.length > 0) {
-        setLocation({
-          lat: parseFloat(data[0].lat),
-          lon: parseFloat(data[0].lon),
-        });
-        setSelectedStop(tempAddress);
-        setIsEditing(false);
-      } else {
-        const errorDiv = document.createElement('div');
-        errorDiv.style.cssText = `
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          background-color: white;
-          padding: 20px;
-          border-radius: 12px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-          z-index: 1000;
-          text-align: center;
-        `;
-        errorDiv.innerHTML = `
-          <p>Please enter a valid address</p>
-          <p style="color: #666; margin-top: 8px;">(ex. 20 W 34th St., New York, NY 10001)</p>
-        `;
-        document.body.appendChild(errorDiv);
-        setTimeout(() => {
-          document.body.removeChild(errorDiv);
-        }, 3000);
-      }
-    } catch (error) {
-      console.error("Address lookup failed:", error);
-      alert("Failed to retrieve location. Please try again.");
-    }
-  };
+    console.log('🔄 isChangingLocation:', isChangingLocation);
+  }, [isChangingLocation]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      handleAddressSubmit();
-    } else if (e.key === "Escape") {
-      setIsEditing(false);
-      setSelectedStop("Nearby Bus Stops");
-    }
-  };
+  useEffect(() => {
+    const handleResize = () => {
+      // Debounce the resize event to prevent excessive re-renders
+      const width = window.innerWidth;
+      if (Math.abs(width - windowWidth) > 50) { // Only update if change is significant
+        setWindowWidth(width);
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [windowWidth]);
 
   interface BusRoutePopupProps {
     route: string;
@@ -234,6 +78,67 @@ export default function Home() {
     onClose: () => void;
     userLocation?: string;
   }
+
+  const LoadingAnimation = () => (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100vh",
+        width: "100vw",
+        textAlign: "center",
+        fontFamily: "Helvetica, sans-serif",
+        fontSize: "1.2rem",
+        fontWeight: "500",
+        position: "fixed",
+        top: 0,
+        left: 0,
+        zIndex: 9999,
+        backgroundColor: "white",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          animation: "busDrive 1s infinite cubic-bezier(0.4, 0, 0.2, 1)",
+          marginBottom: "20px",
+        }}
+      >
+        <img
+          src="/icons/bus_icon.png"
+          alt="Bus Icon"
+          style={{
+            width: "120px",
+            height: "auto",
+            objectFit: "contain",
+          }}
+        />
+      </div>
+      <p>Loading bus data...</p>
+  
+      <style>
+        {`
+          @keyframes busDrive {
+            0% {
+              transform: translateY(0);
+              opacity: 1;
+            }
+            50% {
+              transform: translateY(-15px);
+              opacity: 0.9;
+            }
+            100% {
+              transform: translateY(0);
+              opacity: 1;
+            }
+          }
+        `}
+      </style>
+    </div>
+  );
+
 
   const BusRoutePopup: React.FC<BusRoutePopupProps> = memo(({
     route,
@@ -252,15 +157,13 @@ export default function Home() {
 
     const busIcon = isGoingUp ? "/icons/bus_up.png" : "/icons/bus_down.png";
 
-    useLockBodyScroll();
-
     const scrollableRef = useRef<HTMLDivElement>(null);
     const [highlightedStop, setHighlightedStop] = useState<string | null>(null);
 
     // Store the highlighted stop in a ref to avoid recreating the scroll handler
     const highlightedStopRef = useRef(highlightedStop);
     highlightedStopRef.current = highlightedStop;
-
+    
     // Create a stable scroll handler that uses the ref
     const handleScroll = useRef((event: Event) => {
       const scrollEl = event.target as HTMLDivElement;
@@ -510,72 +413,90 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    // Check sessionStorage to see if the user came from `/about`
+    const visitedFromAbout = sessionStorage.getItem("visitedFromAbout");
+    
+    if (visitedFromAbout) {
+      setIsBannerVisible(false);
+      sessionStorage.removeItem("visitedFromAbout"); // Clear the flag
+    } else if (isBannerVisible) {
+      const timer = setTimeout(() => {
+        setIsBannerVisible(false);
+      }, 15000);
+      return () => clearTimeout(timer);
+    }
+  }, [isBannerVisible]);
+
+
+  useEffect(() => {
+    if (isBannerVisible) {
+      // Start fade-out animation at 10 seconds
+      const fadeTimer = setTimeout(() => {
+        setIsFadingOut(true);
+      }, 10000);
+  
+      // Fully hide the banner at 15 seconds
+      const hideTimer = setTimeout(() => {
+        setIsBannerVisible(false);
+        setIsFadingOut(false); // Reset fade-out state
+      }, 11000);
+  
+      return () => {
+        clearTimeout(fadeTimer);
+        clearTimeout(hideTimer);
+      };
+    }
+  }, [isBannerVisible]);
+
+  useEffect(() => {
     if (typeof window !== "undefined") {
       setIsMobile(window.matchMedia("(pointer: coarse)").matches);
     }
   }, []);
+  // 🛠️ Log Location State Changes
+    useEffect(() => {
+      console.log('🌍 useEffect Triggered — Location updated:', location.lat, location.lon);
+    }, [location]);
 
-  const getFilteredSuggestions = (input: string): string[] => {
-    // First try to match from our predefined locations
-    const locationMatches = BUS_STOP_LOCATIONS
-      .filter(stop =>
-        stop.label.toLowerCase().includes(input.toLowerCase()) &&
-        stop.label !== "Other (Enter Address)"
-      )
-      .map(stop => stop.label);
-
-    // If we're actively typing what looks like an address, fetch from API
-    if (input.length > 3 && /\d/.test(input)) {
-      return addressSuggestions;
-    }
-
-    return locationMatches;
-  };
-
-  const fetchBusData = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/busdata?lat=${location.lat}&lon=${location.lon}`);
-      if (!res.ok) {
-        const text = await res.text();
-        console.error("Server error:", res.status, text);
-        throw new Error(`Server responded with ${res.status}`);
-      }
-      const json = await res.json();
-      if (json.error) {
-        setError(json.error);
-      } else {
+    const fetchBusData = async (lat: number, lon: number) => {
+      setLoading(true);
+      try {
+        console.log('🚍 Fetching bus data for:', lat, lon);
+        
+        // Add a minimum delay of 1 second to ensure animation is visible
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const res = await fetch(`/api/busdata?lat=${lat}&lon=${lon}`);
+        if (!res.ok) {
+          throw new Error(`Server responded with ${res.status}`);
+        }
+        const json = await res.json();
         setData(json);
-        lastUpdateRef.current = Date.now();
-        setTimeRemaining(refreshInterval / 1000);
+        setError(null);
+      } catch (err: any) {
+        console.error('❌ Fetch error:', err);
+        setError('Failed to load bus data.');
+      } finally {
+        setLoading(false);
       }
-    } catch (err: any) {
-      console.error("Fetch error:", err);
-      setError("Failed to load bus data.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
   useEffect(() => {
-    fetchBusData();
-    const interval = setInterval(() => {
-      fetchBusData();
-    }, refreshInterval);
-    return () => clearInterval(interval);
-  }, [location]);
+    fetchBusData(location.lat, location.lon);
+  }, []);
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsMobile(window.matchMedia("(pointer: coarse)").matches);
+    }
+  }, []);
+  
   useEffect(() => {
     if (isMobile) {
-      const hideAddressBar = () => {
-        window.scrollTo(0, 1);
-      };
-      window.addEventListener('load', hideAddressBar);
-      window.addEventListener('scroll', hideAddressBar);
-      return () => {
-        window.removeEventListener('load', hideAddressBar);
-        window.removeEventListener('scroll', hideAddressBar);
-      };
+      const hideAddressBar = () => window.scrollTo(0, 1);
+      // Clean up any existing listeners
+      window.removeEventListener('load', hideAddressBar);
+      window.removeEventListener('scroll', hideAddressBar);
     }
   }, [isMobile]);
 
@@ -599,12 +520,7 @@ export default function Home() {
           } catch (error) {
             console.error('Error fetching suggestions:', error);
           }
-        } else {
-          const fuzzyMatches = BUS_STOP_LOCATIONS
-            .filter(stop => stop.label.toLowerCase().includes(tempAddress.toLowerCase()))
-            .map(stop => stop.label);
-          setAddressSuggestions(fuzzyMatches);
-        }
+        } 
       } else {
         setAddressSuggestions([]);
       }
@@ -614,14 +530,23 @@ export default function Home() {
     return () => clearTimeout(timeoutId);
   }, [tempAddress]);
   useEffect(() => {
-    const ticker = setInterval(() => {
-      const elapsed = (Date.now() - lastUpdateRef.current) / 1000;
-      const remain = refreshInterval / 1000 - elapsed;
-      setTimeRemaining(remain > 0 ? Math.ceil(remain) : 0);
-    }, 1000);
-    return () => clearInterval(ticker);
-  }, []);
-
+  const ticker = setInterval(() => {
+    const elapsed = (Date.now() - lastUpdateRef.current) / 1000;
+    const remain = refreshInterval / 1000 - elapsed;
+    if (remain <= 0) {
+      lastUpdateRef.current = Date.now();
+      setTimeRemaining(refreshInterval / 1000);
+      fetchBusData(location.lat, location.lon);
+    } else {
+      // Update DOM directly instead of state to prevent re-renders
+      if (timerRef.current) {
+        timerRef.current.textContent = Math.ceil(remain).toString();
+      }
+    }
+  }, 1000);
+  return () => clearInterval(ticker);
+}, [location.lat, location.lon]);
+  
   if (error) {
     return (
       <div style={{ padding: 20, textAlign: "center", fontFamily: "Helvetica, sans-serif" }}>
@@ -630,16 +555,11 @@ export default function Home() {
     );
   }
   if (loading && !data) {
-    return (
-      <div style={{ padding: 20, textAlign: "center", fontFamily: "Helvetica, sans-serif" }}>
-        Loading bus data...
-      </div>
-    );
+    return <LoadingAnimation />;
   }
   if (!data) {
     return (
       <div style={{ padding: 20, textAlign: "center", fontFamily: "Helvetica, sans-serif" }}>
-        No data yet.
       </div>
     );
   }
@@ -733,45 +653,26 @@ export default function Home() {
     if (diffMin >= 60) return ">1 hr";
     return diffMin + " min away";
   }
+  
 
   return (
     <BusPopupProvider>
     <BusContent>
       {(showBusInfo) => (
-        <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-          {/* Header with Logo */}
-          <header
-  style={{
-    width: "100%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "10px 20px",
-    backgroundColor: "#fff",
-    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-    position: "sticky",
-    top: 0,
-    zIndex: 2000,
-  }}
->
-  <div style={{ display: "flex", alignItems: "center" }}>
-    <img
-      src="/icons/logo.png"
-      alt="Logo"
-      style={{
-        height: "60px", // Increased from 40px
-        width: "auto",
-        objectFit: "contain",
-      }}
-    />
-  </div>
-</header>
-          <div style={{
+        <div style={{ 
+          display: "flex", 
+          flexDirection: "column", 
+          minHeight: "100vh",
+          overflowY: "auto", // Enable vertical scrolling
+          position: "relative" // Add this to ensure proper stacking
+        }}>
+          <div style={{ 
             padding: 20,
             textAlign: "center",
             maxWidth: "100vw",
-            height: "100vh",
-            overflow: "hidden",
+            minHeight: "100vh",
+            overflowY: "auto",
+            WebkitOverflowScrolling: "touch",
             display: "flex",
             flexDirection: "column"
           }} className={inter.className}>
@@ -782,44 +683,54 @@ export default function Home() {
       color: "#FF3632",
       padding: "8px 12px",
       borderRadius: "8px",
-      display: "inline-flex",
+      display: "flex",
       alignItems: "center",
       gap: "8px",
       position: "absolute",
-      top: "90px",
+      top: "20px",
       left: "50%",
       transform: "translateX(-50%)",
       zIndex: 1500,
       textAlign: "center",
-      whiteSpace: "nowrap",
-      maxWidth: "fit-content",
+      width: "90%",
+      maxWidth: "100vw",
+      boxSizing: "border-box",
+      transition: "opacity 1s ease-in-out",
+      opacity: isFadingOut ? 0 : 1,
+      wordWrap: "break-word",
+      whiteSpace: "normal",
+      lineHeight: "1.4",
+      fontSize: "0.95rem",
     }}
   >
     <span
       style={{
         fontWeight: "bold",
-        fontSize: "0.95rem",
-        lineHeight: "1.2",
-        whiteSpace: "nowrap"
+        whiteSpace: "normal",
+        wordWrap: "break-word",
+        textAlign: "center",
+        flex: 1,
       }}
     >
       📍 Please turn on location services to get information for the closest stops to you!
     </span>
     <button
-      onClick={() => setIsBannerVisible(false)} // Hides the banner on click
+      onClick={() => setIsBannerVisible(false)}
       style={{
         background: "none",
         border: "none",
         fontSize: "1.2rem",
         cursor: "pointer",
-        marginLeft: "4px",
+        marginLeft: "8px",
         color: "#FF3632",
+        flexShrink: 0,
       }}
     >
       ×
     </button>
   </div>
 )}
+
 
             {!locationServicesEnabled && (
               <div style={{ marginTop: isBannerVisible ? "50px" : "0" }} />
@@ -832,63 +743,6 @@ export default function Home() {
               justifyContent: "center",
               alignItems: "center"
             }}>
-              {isUsingCustomAddress && (
-                <div style={{
-                  margin: "10px auto",
-                  textAlign: "center",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: "10px"
-                }}>
-                  <input
-                    type="text"
-                    value={customAddress}
-                    onChange={(e) => setCustomAddress(e.target.value)}
-                    placeholder="Enter address"
-                    style={{
-                      padding: "8px",
-                      borderRadius: "8px",
-                      border: "1px solid #ccc",
-                      fontSize: isMobile ? "0.9rem" : "1rem",
-                      width: isMobile ? "calc(100vw - 40px)" : "80%",
-                      maxWidth: isMobile ? "100%" : "400px"
-                    }}
-                  />
-                  <button
-                    onClick={async () => {
-                      try {
-                        const response = await fetch(
-                          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(customAddress)}`
-                        );
-                        const data = await response.json();
-                        if (data.length > 0) {
-                          setLocation({
-                            lat: parseFloat(data[0].lat),
-                            lon: parseFloat(data[0].lon),
-                          });
-                          setUsingFallback(false);
-                        } else {
-                          alert("Unable to find location. Please check the address.");
-                        }
-                      } catch (error) {
-                        console.error("Address lookup failed:", error);
-                        alert("Failed to retrieve location. Please try again.");
-                      }
-                    }}
-                    style={{
-                      padding: "8px 16px",
-                      borderRadius: "8px",
-                      backgroundColor: "#0078D7",
-                      color: "white",
-                      border: "none",
-                      cursor: "pointer"
-                    }}
-                  >
-                    Set Location
-                  </button>
-                </div>
-              )}
               <div style={{
                 marginBottom: 20,
                 display: "flex",
@@ -904,81 +758,32 @@ export default function Home() {
                 }}>
                   Bus routes near
                 </span>
+                <LocationDropdown 
+  onLocationChange={(newLocation) => {
+    console.log('📍 onLocationChange called with:', newLocation);
+    if (newLocation.lat !== null && newLocation.lon !== null) {
+      console.log('✅ Valid location:', newLocation);
+      setIsChangingLocation(true); // Start animation
+      
+      setLocation({
+        lat: newLocation.lat,
+        lon: newLocation.lon
+      });
 
-                {isEditing ? (
-  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-    <input
-      ref={inputRef}
-      type="text"
-      value={tempAddress}
-      onChange={(e) => setTempAddress(e.target.value)}
-      onKeyDown={handleKeyDown}
-      placeholder="Enter location or full address"
-      style={{
-        padding: "8px 8px",
-        borderRadius: "8px",
-        border: "1px solid #ccc",
-        fontSize: "0.9rem",
-        fontWeight: "bold",
-        width: "300px",
-        maxWidth: "300px",
-        boxSizing: "border-box",
-      }}
-    />
-    <button
-      onClick={() => {
-        setIsEditing(false);
-        setSelectedStop("Other (Enter Address)");
-        setTimeout(() => {
-          const dropdown = document.getElementById('busStopDropdown') as HTMLSelectElement | null;
-          if (dropdown) {
-            dropdown.focus();
-            dropdown.click(); // Trigger native dropdown behavior
-          }
-        }, 0);
-      }}
-      style={{
-        position: 'absolute',
-        right: '8px',
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        fontSize: '1rem',
-        pointerEvents: 'auto',
-      }}
-    >
-      ⌄
-    </button>
-  </div>
-) : (
-  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-    <select
-      id="busStopDropdown"
-      value={selectedStop}
-      onChange={handleStopChange}
-      style={{
-        padding: "4px 8px",
-        height: "36px",
-        lineHeight: "28px",
-        borderRadius: "8px",
-        border: "1px solid #ccc",
-        fontSize: "0.9rem",
-        fontWeight: "bold",
-        width: "300px",
-        maxWidth: "300px",
-        appearance: 'auto',
-        boxSizing: "border-box",
-      }}
-    >
-      {BUS_STOP_LOCATIONS.map((stop) => (
-        <option key={stop.label} value={stop.label}>
-          {stop.secondaryLabel ? `${stop.label} — ${stop.secondaryLabel}` : stop.label}
-        </option>
-      ))}
-    </select>
-  </div>
-)}
+      fetchBusData(newLocation.lat, newLocation.lon)
+        .finally(() => {
+          setTimeout(() => {
+            console.log('🛑 Animation completed, setting isChangingLocation to false');
+            setIsChangingLocation(false); // End animation after 2s
+          }, 2000); // Match animation duration
+        });
 
+      console.log('🚦 isChangingLocation set to:', true);
+    } else {
+      console.warn('⚠️ Invalid location coordinates:', newLocation);
+    }
+  }}
+/>
 
               </div>
             </div>
@@ -991,9 +796,11 @@ export default function Home() {
               padding: "0 20px"
             }}></div>
 
-            <p className="dark:text-white" style={{ marginBottom: 20 }}> {/* Changed from 20 to 10 */}
-              <strong>Updated: {updatedTimeString}</strong> (next refresh in {timeRemaining}s)
-            </p>
+            {!isInvalidAddress && data && finalStops.length > 0 && (
+              <p className="dark:text-white" style={{ marginBottom: 20 }}>
+                <strong>Updated: {updatedTimeString}</strong> (next refresh in <span ref={timerRef}>{timeRemaining}</span>s)
+              </p>
+            )}
 
             {isStopLoading && (
               <div style={{
@@ -1087,12 +894,6 @@ export default function Home() {
                         ? `(${stop.distance} miles away)`
                         : "(distance unknown)"}
                     </h2>
-                    {isMobile && (
-                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
-                        <FaArrowLeft />
-                        <FaArrowRight />
-                      </div>
-                    )}
 
                     {!hasBuses && (
                       <p style={{
@@ -1234,7 +1035,7 @@ export default function Home() {
                                                   stopsAway,
                                                   selectedArrival?.MonitoredVehicleJourney?.DestinationName || "Unknown Destination",
                                                   stop.stopName,
-                                                  selectedStop,
+                                                  selectedStop || stop.stopName,
                                                   stopsAway,
                                                   visit.vehicleRef // Pass VehicleRef explicitly
                                                 );
@@ -1317,20 +1118,6 @@ export default function Home() {
                   </div>
                 );
               })}
-            </div>
-
-            <div style={{
-              marginTop: "auto",
-              marginBottom: 10,
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: "4px"
-            }} className="dark:text-white">
-              <p style={{ fontSize: "0.9em", color: "#666" }}>
-                Made possible with MTA Bus Time API
-              </p>
             </div>
             </div>
         </div>
