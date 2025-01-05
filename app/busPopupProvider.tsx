@@ -294,7 +294,7 @@ useEffect(() => {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        zIndex: 1000,
+        zIndex: 2000,
       }}
       onClick={handleOverlayClick}
     >

@@ -25,9 +25,20 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
     const [lastStateChange, setLastStateChange] = useState(Date.now());
     const MIN_STATE_DURATION = 500; // milliseconds
 
+    // Effect to handle window width changes
+    useEffect(() => {
+        // Automatically uncollapse header on desktop
+        if (windowWidth >= 768) {
+            setIsCollapsed(false);
+        }
+    }, [windowWidth]);
+
     const handleScroll = useCallback(() => {
         // Only apply collapse behavior for screens smaller than desktop
-        if (windowWidth >= 768) return;
+        if (windowWidth >= 768) {
+            setIsCollapsed(false);
+            return;
+        }
 
         const currentScrollY = window.scrollY;
         const now = Date.now();
@@ -98,7 +109,6 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
                     <span style={{ fontSize: '1.8rem' }}>🚌</span>
                     Bus routes near
                 </span>
-
                 <LocationDropdown
                     selectedStop={selectedStop}
                     onLocationChange={onLocationChange}
