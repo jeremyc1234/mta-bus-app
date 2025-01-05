@@ -1,11 +1,9 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
 
 export default function About() {
   const [faqOpen, setFaqOpen] = useState<Record<number, boolean>>({});
-  const router = useRouter();
   const contentRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
   const toggleFAQ = (index: number) => {
@@ -21,11 +19,6 @@ export default function About() {
       }
     };
   }, []);
-
-  const handleNavigateToHome = () => {
-    sessionStorage.setItem("visitedFromAbout", "true");
-    router.push("/");
-  };
 
   return (
     <main

@@ -102,6 +102,44 @@ const BUS_STOP_LOCATIONS = [
   }>>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  const updateURL = (newLocation: any, isCustomAddress: boolean) => {
+    const url = new URL(window.location.href);
+    
+    // Clear existing params
+    url.searchParams.delete('lat');
+    url.searchParams.delete('lon');
+    url.searchParams.delete('address');
+    url.searchParams.delete('location');
+    url.searchParams.delete('timestamp');
+  
+    // Add new params
+    if (isCustomAddress) {
+      url.searchParams.set('lat', newLocation.value.lat.toString());
+      url.searchParams.set('lon', newLocation.value.lon.toString());
+      url.searchParams.set('address', newLocation.value.label);
+    } else {
+      url.searchParams.set('location', newLocation.value.label);
+      url.searchParams.set('lat', newLocation.value.lat.toString());
+      url.searchParams.set('lon', newLocation.value.lon.toString());
+    }
+  
+    // Add timestamp
+    url.searchParams.set('timestamp', Date.now().toString());
+  
+    // Update URL without page reload
+    window.history.replaceState(
+      { 
+        lat: newLocation.value.lat,
+        lon: newLocation.value.lon,
+        type: isCustomAddress ? 'address' : 'location',
+        label: newLocation.value.label,
+        timestamp: Date.now()
+      }, 
+      '', 
+      url.toString()
+    );
+  };
+
   // 🛠️ Load cached value from localStorage
   useEffect(() => {
     const cachedLocation = localStorage.getItem('selectedLocation');
@@ -132,9 +170,8 @@ const BUS_STOP_LOCATIONS = [
     const addressParam = searchParams.get('address');
     const lat = searchParams.get('lat');
     const lon = searchParams.get('lon');
-
+  
     if (locationParam) {
-      // Handle predefined location
       const predefinedLocation = BUS_STOP_LOCATIONS.find(
         loc => loc.label === decodeURIComponent(locationParam)
       );
@@ -145,9 +182,13 @@ const BUS_STOP_LOCATIONS = [
           label: predefinedLocation.label,
           isCustomAddress: false
         });
+  
+        onLocationChangeRef.current({
+          lat: predefinedLocation.lat,
+          lon: predefinedLocation.lon
+        });
       }
     } else if (addressParam && lat && lon) {
-      // Handle custom address
       setSelectedValue({
         value: {
           lat: parseFloat(lat),
@@ -156,6 +197,24 @@ const BUS_STOP_LOCATIONS = [
         },
         label: decodeURIComponent(addressParam),
         isCustomAddress: true
+      });
+  
+      onLocationChangeRef.current({
+        lat: parseFloat(lat),
+        lon: parseFloat(lon)
+      });
+    } else {
+      // Set Union Square as default if no location is specified
+      const defaultLocation = BUS_STOP_LOCATIONS[0];
+      setSelectedValue({
+        value: defaultLocation,
+        label: defaultLocation.label,
+        isCustomAddress: false
+      });
+  
+      onLocationChangeRef.current({
+        lat: defaultLocation.lat,
+        lon: defaultLocation.lon
       });
     }
   }, [searchParams]);
@@ -229,74 +288,70 @@ const BUS_STOP_LOCATIONS = [
   };
 
   const handleSelectChange = (selectedOption: any) => {
-    console.log("🎯 handleSelectChange triggered in LocationDropdown");
     setSelectedValue(selectedOption);
     
-    if (selectedOption) {
-      localStorage.setItem('selectedLocation', JSON.stringify(selectedOption));
-      if (selectedOption.value.lat && selectedOption.value.lon) {
-        console.log("🔄 Setting isLocationChanging to TRUE in LocationDropdown");
-        setIsLocationChanging(true); // Start loading animation
-        
-        // Add a small delay to ensure state propagation
-        setTimeout(() => {
-          console.log("📍 Calling onLocationChange with:", selectedOption.value);
-          onLocationChangeRef.current({
-            lat: selectedOption.value.lat,
-            lon: selectedOption.value.lon,
-          });
-        }, 100);
-
-      // Create new URL
-      const url = new URL(window.location.origin + pathname);
+    if (selectedOption?.value?.lat && selectedOption?.value?.lon) {
+      setIsLocationChanging(true);
       
-      if (selectedOption.isCustomAddress) {
-        url.searchParams.set('lat', selectedOption.value.lat.toString());
-        url.searchParams.set('lon', selectedOption.value.lon.toString());
-        url.searchParams.set('address', selectedOption.value.label);
-        url.searchParams.delete('location');
-      } else if (selectedOption.value.lat !== null && selectedOption.value.lon !== null) {
-        url.searchParams.set('lat', selectedOption.value.lat.toString());
-        url.searchParams.set('lon', selectedOption.value.lon.toString());
-        url.searchParams.set('location', selectedOption.value.label);
-        url.searchParams.delete('address');
-      }
-      
-      window.history.replaceState(
-        { 
+      setTimeout(() => {
+        onLocationChangeRef.current({
           lat: selectedOption.value.lat,
           lon: selectedOption.value.lon,
-          type: selectedOption.isCustomAddress ? 'address' : 'location',
-          label: selectedOption.value.label
-        }, 
-        '', 
-        url.toString()
-      );
+        });
+        
+        // Update URL with new location
+        const url = new URL(window.location.href);
+        
+        // Clear existing params
+        url.searchParams.delete('lat');
+        url.searchParams.delete('lon');
+        url.searchParams.delete('address');
+        url.searchParams.delete('location');
+        url.searchParams.delete('timestamp');
+        
+        // Add new params
+        if (selectedOption.isCustomAddress) {
+          url.searchParams.set('lat', selectedOption.value.lat.toString());
+          url.searchParams.set('lon', selectedOption.value.lon.toString());
+          url.searchParams.set('address', selectedOption.value.label);
+        } else {
+          url.searchParams.set('location', selectedOption.value.label);
+          url.searchParams.set('lat', selectedOption.value.lat.toString());
+          url.searchParams.set('lon', selectedOption.value.lon.toString());
+        }
+        url.searchParams.set('timestamp', Date.now().toString());
+        
+        // Update URL without page reload
+        window.history.replaceState(
+          { 
+            lat: selectedOption.value.lat,
+            lon: selectedOption.value.lon,
+            type: selectedOption.isCustomAddress ? 'address' : 'location',
+            label: selectedOption.value.label,
+            timestamp: Date.now()
+          }, 
+          '', 
+          url.toString()
+        );
+      }, 100);
     }
-  }
-};
+  };
   
   
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === 'Enter' && addressSuggestions.length > 0) {
       const firstSuggestion = addressSuggestions[0];
       setSelectedValue(firstSuggestion);
-      localStorage.setItem('selectedLocation', JSON.stringify(firstSuggestion));
       
-      const url = new URL(window.location.origin + pathname);
-      url.searchParams.set('lat', firstSuggestion.value.lat.toString());
-      url.searchParams.set('lon', firstSuggestion.value.lon.toString());
-      url.searchParams.set('address', firstSuggestion.value.label);
-      
-      window.history.replaceState({}, '', url.toString());
-  
       onLocationChangeRef.current({
         lat: firstSuggestion.value.lat,
         lon: firstSuggestion.value.lon
       });
+  
+      // Update URL with new location
+      updateURL(firstSuggestion, true);
     }
   };
-
   const allOptions = [
     ...locationOptions.filter(opt => !opt.isAddressSearch),
     ...(addressSuggestions.length > 0

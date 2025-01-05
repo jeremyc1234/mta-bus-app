@@ -1,3 +1,4 @@
+// headerSection.tsx
 import React, { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 

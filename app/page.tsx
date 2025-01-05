@@ -194,12 +194,128 @@ export default function Home() {
 
   useEffect(() => {
     const locationLabel = searchParams.get('location');
+    const addressParam = searchParams.get('address');
     const lat = searchParams.get('lat');
     const lon = searchParams.get('lon');
+    const timestamp = searchParams.get('timestamp');
+  
+    // If we have location parameters in the URL
+    if (locationLabel || (lat && lon)) {
+      if (locationLabel) {
+        // Handle predefined location
+        const predefinedLocation = BUS_STOP_LOCATIONS.find(
+          (loc) => loc.label.toLowerCase() === locationLabel.toLowerCase()
+        );
+  
+        if (predefinedLocation && predefinedLocation.lat && predefinedLocation.lon) {
+          setLocation({
+            lat: predefinedLocation.lat,
+            lon: predefinedLocation.lon,
+          });
+          setSelectedStop(locationLabel);
+          setLocationLocked(true);
+          return;
+        }
+      } else if (lat && lon && addressParam) {
+        // Handle custom address
+        setLocation({
+          lat: parseFloat(lat),
+          lon: parseFloat(lon)
+        });
+        setSelectedStop(addressParam);
+        setLocationLocked(true);
+        return;
+      }
+    }
 
-    if (locationLabel) {
+    // No location in URL - check for geolocation
+    if (!locationLocked && "geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const newLocation = {
+            lat: position.coords.latitude,
+            lon: position.coords.longitude
+          };
+          setLocation(newLocation);
+          setLocationServicesEnabled(true);
+          
+          // Update URL with geolocation
+          const url = new URL(window.location.href);
+          url.searchParams.set('lat', newLocation.lat.toString());
+          url.searchParams.set('lon', newLocation.lon.toString());
+          url.searchParams.set('timestamp', Date.now().toString());
+          window.history.replaceState(
+            { ...newLocation, timestamp: Date.now() },
+            '',
+            url.toString()
+          );
+        },
+        (error) => {
+          setLocationServicesEnabled(false);
+          // Set Union Square as default with proper URL parameters
+          const defaultLocation = BUS_STOP_LOCATIONS[0]; // Union Square
+          if (defaultLocation.lat !== null && defaultLocation.lon !== null) {
+            setLocation({ 
+              lat: defaultLocation.lat, 
+              lon: defaultLocation.lon 
+            });
+            const url = new URL(window.location.href);
+            url.searchParams.set('location', defaultLocation.label);
+            url.searchParams.set('lat', defaultLocation.lat.toString());
+            url.searchParams.set('lon', defaultLocation.lon.toString());
+            window.history.replaceState(
+              { 
+                lat: defaultLocation.lat, 
+                lon: defaultLocation.lon,
+                type: 'location',
+                label: defaultLocation.label
+              },
+              '',
+              url.toString()
+            );
+          }
+        }
+      );
+    } else if (!locationLocked) {
+      // Set Union Square as default with proper URL parameters
+      const defaultLocation = BUS_STOP_LOCATIONS[0]; // Union Square
+      if (defaultLocation.lat !== null && defaultLocation.lon !== null) {
+        setLocation({ 
+          lat: defaultLocation.lat, 
+          lon: defaultLocation.lon 
+        });
+        const url = new URL(window.location.href);
+        url.searchParams.set('location', defaultLocation.label);
+        url.searchParams.set('lat', defaultLocation.lat.toString());
+        url.searchParams.set('lon', defaultLocation.lon.toString());
+        window.history.replaceState(
+          { 
+            lat: defaultLocation.lat, 
+            lon: defaultLocation.lon,
+            type: 'location',
+            label: defaultLocation.label
+          },
+          '',
+          url.toString()
+        );
+      }
+    }
+}, [searchParams, locationLocked]);
+
+useEffect(() => {
+  const handlePopState = (event: PopStateEvent) => {
+    const url = new URL(window.location.href);
+    const state = event.state;
+
+    // First try to get location from URL parameters
+    const lat = url.searchParams.get('lat');
+    const lon = url.searchParams.get('lon');
+    const locationParam = url.searchParams.get('location');
+    const addressParam = url.searchParams.get('address');
+
+    if (locationParam) {
       const predefinedLocation = BUS_STOP_LOCATIONS.find(
-        (loc) => loc.label.toLowerCase() === locationLabel.toLowerCase()
+        (loc) => loc.label === decodeURIComponent(locationParam)
       );
 
       if (predefinedLocation && predefinedLocation.lat && predefinedLocation.lon) {
@@ -207,69 +323,61 @@ export default function Home() {
           lat: predefinedLocation.lat,
           lon: predefinedLocation.lon,
         });
-        setSelectedStop(locationLabel); // Update selectedStop state
-        setLocationLocked(true);
+        setSelectedStop(locationParam);
         return;
       }
-    }
-
-    if (lat && lon) {
-      setLocation({ lat: parseFloat(lat), lon: parseFloat(lon) });
-      setLocationLocked(true);
+    } else if (lat && lon) {
+      setLocation({
+        lat: parseFloat(lat),
+        lon: parseFloat(lon),
+      });
+      if (addressParam) {
+        setSelectedStop(addressParam);
+      }
       return;
     }
-    setLocation({ lat: FALLBACK_LAT, lon: FALLBACK_LON });
-  }, [searchParams]);
 
-  useEffect(() => {
-    const handlePopState = (event: PopStateEvent) => {
-      const url = new URL(window.location.href);
-      const state = event.state;
-
-      // Clear all location-related params first
-      if (!state) {
-        // If no state, use URL params
-        const lat = url.searchParams.get('lat');
-        const lon = url.searchParams.get('lon');
-        const locationParam = url.searchParams.get('location');
-        const addressParam = url.searchParams.get('address');
-
-        if (locationParam) {
-          const predefinedLocation = BUS_STOP_LOCATIONS.find(
-            (loc) => loc.label === decodeURIComponent(locationParam)
-          );
-
-          if (predefinedLocation && predefinedLocation.lat && predefinedLocation.lon) {
-            setLocation({
-              lat: predefinedLocation.lat,
-              lon: predefinedLocation.lon,
-            });
-            setSelectedStop(locationParam);
-          }
-        } else if (lat && lon && addressParam) {
-          setLocation({
-            lat: parseFloat(lat),
-            lon: parseFloat(lon),
-          });
-          setSelectedStop(null);
-        }
-      } else {
-        // Use state if available
+    // If no URL params and no state, fall back to Union Square
+    if (!state) {
+      const defaultLocation = BUS_STOP_LOCATIONS[0];
+      if (defaultLocation.lat !== null && defaultLocation.lon !== null) {
         setLocation({
-          lat: state.lat,
-          lon: state.lon
+          lat: defaultLocation.lat,
+          lon: defaultLocation.lon,
         });
-        if (state.type === 'location') {
-          setSelectedStop(state.label);
-        } else {
-          setSelectedStop(null);
-        }
+        setSelectedStop(defaultLocation.label);
+        // Update URL with default location
+        url.searchParams.set('location', defaultLocation.label);
+        url.searchParams.set('lat', defaultLocation.lat.toString());
+        url.searchParams.set('lon', defaultLocation.lon.toString());
+        window.history.replaceState(
+          { 
+            lat: defaultLocation.lat,
+            lon: defaultLocation.lon,
+            type: 'location',
+            label: defaultLocation.label
+          },
+          '',
+          url.toString()
+        );
       }
-    };
+    } else {
+      // Use state if available
+      setLocation({
+        lat: state.lat,
+        lon: state.lon
+      });
+      if (state.type === 'location') {
+        setSelectedStop(state.label);
+      } else {
+        setSelectedStop(null);
+      }
+    }
+  };
 
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  window.addEventListener('popstate', handlePopState);
+  return () => window.removeEventListener('popstate', handlePopState);
+}, []);
 
   const [isFadingOut, setIsFadingOut] = useState(false);
 
@@ -692,31 +800,6 @@ export default function Home() {
       prevProps.stops.every((stop, index) => stop === nextProps.stops[index]);
     return areEqual;
   });
-
-  // Get device location
-  useEffect(() => {
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocation({
-            lat: position.coords.latitude,
-            lon: position.coords.longitude
-          });
-          setLocationServicesEnabled(true);
-        },
-        (error) => {
-          setLocationServicesEnabled(false);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 5000,
-          maximumAge: 0
-        }
-      );
-    } else {
-      setLocationServicesEnabled(false);
-    }
-  }, []);
 
   useEffect(() => {
     if (sessionStorage.getItem("visitedFromHeader")) {

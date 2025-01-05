@@ -8,6 +8,7 @@ import HeaderSection from './headerSection';
 
 const TABLET_BREAKPOINT = 768;
 
+
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [windowWidth, setWindowWidth] = useState(0);
@@ -15,6 +16,14 @@ export default function Header() {
   const [locationServicesEnabled, setLocationServicesEnabled] = useState<boolean>(false); // ✅ Added state
   const pathname = usePathname();
   const [isLocationChanging, setIsLocationChanging] = useState(false);
+
+  const preserveUrlParams = (currentPath: string) => {
+    if (typeof window === 'undefined') return currentPath;
+    const url = new URL(window.location.href);
+    const params = url.searchParams.toString();
+    return params ? `${currentPath}?${params}` : currentPath;
+  };
+  
 
 
   const handleLocationChange = async (newLocation: { lat: number | null; lon: number | null }) => {
@@ -72,6 +81,8 @@ export default function Header() {
 
   const handleHomeClick = () => {
     sessionStorage.setItem("visitedFromHeader", "true");
+    // Return false to prevent the default navigation
+    return false;
   };
 
   return (
@@ -120,8 +131,11 @@ export default function Header() {
 
         {/* Logo with conditional styling */}
         <Link 
-          href="/"
-          onClick={handleHomeClick}
+          href={preserveUrlParams('/')}
+          onClick={(e) => {
+            handleHomeClick();
+            // Don't prevent default - let the preserveUrlParams work
+          }}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -160,7 +174,7 @@ export default function Header() {
             gap: '2rem',
           }}>
             <Link 
-              href="/"
+              href={preserveUrlParams('/')}
               onClick={handleHomeClick}
               style={{
                 textDecoration: 'none',
@@ -173,7 +187,7 @@ export default function Header() {
               Home
             </Link>
             <Link 
-              href="/schedules"
+              href={preserveUrlParams('/schedules')}
               style={{
                 textDecoration: 'none',
                 color: 'inherit',
@@ -185,7 +199,7 @@ export default function Header() {
               Schedules
             </Link>
             <Link 
-              href="/about"
+              href={preserveUrlParams('/about')}
               style={{
                 textDecoration: 'none',
                 color: 'inherit',
@@ -218,61 +232,61 @@ export default function Header() {
               onClick={() => setIsMenuOpen(false)}
             />
             <nav style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              height: '100%',
-              width: '250px',
-              backgroundColor: '#fff',
-              boxShadow: '2px 0 4px rgba(0, 0, 0, 0.1)',
-              padding: '80px 20px 20px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '15px',
-              zIndex: 1999,
-              transform: isMenuOpen ? 'translateX(0)' : 'translateX(-100%)',
-              transition: 'transform 0.3s ease-in-out',
-            }}>
-              <Link 
-                href="/"
-                onClick={() => setIsMenuOpen(false)}
-                style={{
-                  padding: '10px 0',
-                  borderBottom: '1px solid #eee',
-                  textDecoration: 'none',
-                  color: 'inherit',
-                  fontSize: '1.1rem',
-                }}
-              >
-                Home
-              </Link>
-              <Link 
-                href="/schedules"
-                onClick={() => setIsMenuOpen(false)}
-                style={{
-                  padding: '10px 0',
-                  borderBottom: '1px solid #eee',
-                  textDecoration: 'none',
-                  color: 'inherit',
-                  fontSize: '1.1rem',
-                }}
-              >
-                Schedules
-              </Link>
-              <Link 
-                href="/about"
-                onClick={() => setIsMenuOpen(false)}
-                style={{
-                  padding: '10px 0',
-                  borderBottom: '1px solid #eee',
-                  textDecoration: 'none',
-                  color: 'inherit',
-                  fontSize: '1.1rem',
-                }}
-              >
-                About
-              </Link>
-            </nav>
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  height: '100%',
+  width: '250px',
+  backgroundColor: '#fff',
+  boxShadow: '2px 0 4px rgba(0, 0, 0, 0.1)',
+  padding: '80px 20px 20px',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '15px',
+  zIndex: 1999,
+  transform: isMenuOpen ? 'translateX(0)' : 'translateX(-100%)',
+  transition: 'transform 0.3s ease-in-out',
+}}>
+  <Link 
+    href={preserveUrlParams('/')}
+    onClick={() => setIsMenuOpen(false)}
+    style={{
+      padding: '10px 0',
+      borderBottom: '1px solid #eee',
+      textDecoration: 'none',
+      color: 'inherit',
+      fontSize: '1.1rem',
+    }}
+  >
+    Home
+  </Link>
+  <Link 
+    href={preserveUrlParams('/schedules')}
+    onClick={() => setIsMenuOpen(false)}
+    style={{
+      padding: '10px 0',
+      borderBottom: '1px solid #eee',
+      textDecoration: 'none',
+      color: 'inherit',
+      fontSize: '1.1rem',
+    }}
+  >
+    Schedules
+  </Link>
+  <Link 
+    href={preserveUrlParams('/about')}
+    onClick={() => setIsMenuOpen(false)}
+    style={{
+      padding: '10px 0',
+      borderBottom: '1px solid #eee',
+      textDecoration: 'none',
+      color: 'inherit',
+      fontSize: '1.1rem',
+    }}
+  >
+    About
+  </Link>
+</nav>
           </>
         )}
       </div>
