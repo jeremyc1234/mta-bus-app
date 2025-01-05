@@ -78,7 +78,6 @@ export async function GET(request: Request) {
 
     // Reverse the stops if the direction is '0'
     if (matchedDirection === '0') {
-      console.log('🔄 Reversing stops for direction 0');
       stopsForMatchedDirection = stopsForMatchedDirection.reverse();
     }
 

@@ -1,14 +1,76 @@
 "use client";
 
 import React, { useRef, useState, useEffect, useMemo, useCallback, memo } from "react";
-import { FaArrowLeft, FaArrowRight } from "react-icons/fa";
-import { useLockBodyScroll } from '@uidotdev/usehooks';
 import { BusPopupProvider, BusContent } from './busPopupProvider';
 import { Inter } from 'next/font/google';
-import LocationDropdown from './locationDropdown';
-import LocationChangeAnimation from "./locationChangeAnimation";
+
+import ServiceAlertPopup from './serviceAlertPopup'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import NavigationButtons from './navigationButtons';
 
 const inter = Inter({ subsets: ['latin'] });
+
+const BUS_STOP_LOCATIONS = [
+  // Manhattan
+  { label: "Union Square", secondaryLabel: "default", lat: 40.7359, lon: -73.9906 },
+  { label: "Times Square", lat: 40.7580, lon: -73.9855 },
+  { label: "Central Park", lat: 40.7851, lon: -73.9683 },
+  { label: "Empire State Building", lat: 40.7488, lon: -73.9857 },
+  { label: "Wall Street", lat: 40.7074, lon: -74.0113 },
+  { label: "Grand Central Terminal", lat: 40.7527, lon: -73.9772 },
+  { label: "Rockefeller Center", lat: 40.7587, lon: -73.9787 },
+  { label: "One World Trade Center", lat: 40.7127, lon: -74.0134 },
+  { label: "The High Line", lat: 40.7479, lon: -74.0048 },
+  { label: "Bryant Park", lat: 40.7536, lon: -73.9832 },
+  { label: "St. Patrick's Cathedral", lat: 40.7585, lon: -73.9759 },
+  { label: "Fifth Avenue Shopping District", lat: 40.7603, lon: -73.9755 },
+  { label: "Chrysler Building", lat: 40.7516, lon: -73.9755 },
+  { label: "Metropolitan Museum of Art", lat: 40.7794, lon: -73.9632 },
+  { label: "American Museum of Natural History", lat: 40.7813, lon: -73.9730 },
+  { label: "Museum of Modern Art (MoMA)", lat: 40.7614, lon: -73.9776 },
+  { label: "Broadway Theater District", lat: 40.7590, lon: -73.9845 },
+  { label: "Madison Square Garden", lat: 40.7505, lon: -73.9934 },
+  { label: "Little Italy", lat: 40.7191, lon: -73.9973 },
+  { label: "Chinatown", lat: 40.7158, lon: -73.9970 },
+  { label: "Battery Park", lat: 40.7033, lon: -74.0170 },
+  { label: "Chelsea Market", lat: 40.7424, lon: -74.0060 },
+  { label: "SoHo", lat: 40.7233, lon: -74.0020 },
+  { label: "Washington Square Park", lat: 40.7308, lon: -73.9973 },
+
+  // Brooklyn
+  { label: "Brooklyn Bridge", lat: 40.7061, lon: -73.9969 },
+  { label: "Prospect Park", lat: 40.6602, lon: -73.9690 },
+  { label: "Brooklyn Museum", lat: 40.6712, lon: -73.9636 },
+  { label: "DUMBO", lat: 40.7033, lon: -73.9894 },
+  { label: "Coney Island", lat: 40.5749, lon: -73.9850 },
+  { label: "Barclays Center", lat: 40.6826, lon: -73.9752 },
+  { label: "Brooklyn Botanic Garden", lat: 40.6676, lon: -73.9632 },
+
+  // Queens
+  { label: "Flushing Meadows-Corona Park", lat: 40.7498, lon: -73.8408 },
+  { label: "Citi Field", lat: 40.7571, lon: -73.8458 },
+  { label: "Astoria Park", lat: 40.7795, lon: -73.9220 },
+  { label: "Rockaway Beach", lat: 40.5795, lon: -73.8351 },
+  { label: "JFK Airport", lat: 40.6413, lon: -73.7781 },
+  { label: "Gantry Plaza State Park", lat: 40.7479, lon: -73.9565 },
+
+  // The Bronx
+  { label: "Yankee Stadium", lat: 40.8296, lon: -73.9262 },
+  { label: "Bronx Zoo", lat: 40.8506, lon: -73.8769 },
+  { label: "New York Botanical Garden", lat: 40.8623, lon: -73.8770 },
+  { label: "Fordham University", lat: 40.8610, lon: -73.8857 },
+  { label: "Pelham Bay Park", lat: 40.8719, lon: -73.8065 },
+
+  // Staten Island
+  { label: "Staten Island Ferry Terminal", lat: 40.6437, lon: -74.0733 },
+  { label: "Staten Island Zoo", lat: 40.6257, lon: -74.1152 },
+  { label: "Richmond Town", lat: 40.5706, lon: -74.1455 },
+
+  { label: "Roosevelt Island Tramway", lat: 40.7614, lon: -73.9493 },
+
+  // Other
+  { label: "Other (Enter Address)", lat: null, lon: null }
+];
 
 interface DropdownProps {
   isOpen: boolean;
@@ -17,12 +79,35 @@ interface DropdownProps {
   children: React.ReactNode;
 }
 
+interface ServiceAlert {
+  route: string;
+  summary: string;
+  description: string;
+  creationTime: string;
+  updatedTime: string;
+  activePeriod: Array<{ start: string; end: string }>;
+  status: string;
+  notice: string;
+  mapLink?: string;
+}
+
 export default function Home() {
   // Union Square fallback lat/lon
   const FALLBACK_LAT = 40.7359;
   const FALLBACK_LON = -73.9906;
 
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 0);
+
+  const urlLocationRef = useRef<{ lat: number | null; lon: number | null }>({ lat: null, lon: null });
+  const initialLat = searchParams.get('lat');
+  const initialLon = searchParams.get('lon');
+
+  const defaultLat = initialLat ? parseFloat(initialLat) : FALLBACK_LAT;
+  const defaultLon = initialLon ? parseFloat(initialLon) : FALLBACK_LON;
 
   const [locationServicesEnabled, setLocationServicesEnabled] = useState(false);
   const [isBannerVisible, setIsBannerVisible] = useState<boolean>(true);
@@ -32,10 +117,161 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [location, setLocation] = useState<{ lat: number; lon: number }>({
-    lat: FALLBACK_LAT,
-    lon: FALLBACK_LON
+    lat: !isNaN(defaultLat) ? defaultLat : FALLBACK_LAT,
+    lon: !isNaN(defaultLon) ? defaultLon : FALLBACK_LON,
   });
+
+
+  const [locationLocked, setLocationLocked] = useState(!!(initialLat && initialLon));
+  const [routesWithAlerts, setRoutesWithAlerts] = useState<Record<string, boolean>>({});
+  const [isLocationChanging, setIsLocationChanging] = useState(false);
+  const [isChanging, setIsChanging] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isScrollableLeft, setIsScrollableLeft] = useState(false);
+  const [isScrollableRight, setIsScrollableRight] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   
+  const checkScrollable = () => {
+    const el = scrollContainerRef.current;
+    if (el) {
+      const canScrollLeft = el.scrollLeft > 0;
+      const canScrollRight = el.scrollWidth > el.clientWidth + el.scrollLeft;
+  
+      console.log("🛠️ Scroll Check:", {
+        canScrollLeft,
+        canScrollRight,
+        scrollLeft: el.scrollLeft,
+        scrollWidth: el.scrollWidth,
+        clientWidth: el.clientWidth,
+      });
+  
+      setIsScrollableLeft(canScrollLeft);
+      setIsScrollableRight(canScrollRight);
+    }
+  };
+  
+  useEffect(() => {
+    checkScrollable();
+    const el = scrollContainerRef.current;
+    if (el) {
+      el.addEventListener('scroll', checkScrollable);
+      window.addEventListener('resize', checkScrollable);
+    }
+    return () => {
+      if (el) el.removeEventListener('scroll', checkScrollable);
+      window.removeEventListener('resize', checkScrollable);
+    };
+  }, []);
+  const checkServiceAlert = async (routeId: string) => {
+    try {
+      let cleanRouteId = routeId.replace('MTA NYCT_', '').replace('MTABC_', '');
+      const upperRouteId = cleanRouteId.toUpperCase();
+      let fullRouteId = /^(BM|QM|BXM|Q\d+|B\d+|S\d+)/.test(upperRouteId)
+        ? `MTABC_${cleanRouteId}`
+        : `MTA NYCT_${cleanRouteId}`;
+
+      const res = await fetch(`/api/servicealert?routeId=${encodeURIComponent(fullRouteId)}`);
+
+      if (!res.ok) {
+        return false;
+      }
+
+      const data = await res.json();
+      return data.situations && data.situations.length > 0 &&
+        data.situations[0].status !== 'GOOD_SERVICE' &&
+        data.situations[0].summary !== 'No Current Service Alerts';
+    } catch (error) {
+      console.error('Error checking service alert:', error);
+      return false;
+    }
+  };
+
+
+  useEffect(() => {
+    if (location.lat && location.lon) {
+      fetchBusData(location.lat, location.lon);
+    }
+  }, [location.lat, location.lon]);
+
+  useEffect(() => {
+    const locationLabel = searchParams.get('location');
+    const lat = searchParams.get('lat');
+    const lon = searchParams.get('lon');
+
+    if (locationLabel) {
+      const predefinedLocation = BUS_STOP_LOCATIONS.find(
+        (loc) => loc.label.toLowerCase() === locationLabel.toLowerCase()
+      );
+
+      if (predefinedLocation && predefinedLocation.lat && predefinedLocation.lon) {
+        setLocation({
+          lat: predefinedLocation.lat,
+          lon: predefinedLocation.lon,
+        });
+        setSelectedStop(locationLabel); // Update selectedStop state
+        setLocationLocked(true);
+        return;
+      }
+    }
+
+    if (lat && lon) {
+      setLocation({ lat: parseFloat(lat), lon: parseFloat(lon) });
+      setLocationLocked(true);
+      return;
+    }
+    setLocation({ lat: FALLBACK_LAT, lon: FALLBACK_LON });
+  }, [searchParams]);
+
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      const url = new URL(window.location.href);
+      const state = event.state;
+
+      // Clear all location-related params first
+      if (!state) {
+        // If no state, use URL params
+        const lat = url.searchParams.get('lat');
+        const lon = url.searchParams.get('lon');
+        const locationParam = url.searchParams.get('location');
+        const addressParam = url.searchParams.get('address');
+
+        if (locationParam) {
+          const predefinedLocation = BUS_STOP_LOCATIONS.find(
+            (loc) => loc.label === decodeURIComponent(locationParam)
+          );
+
+          if (predefinedLocation && predefinedLocation.lat && predefinedLocation.lon) {
+            setLocation({
+              lat: predefinedLocation.lat,
+              lon: predefinedLocation.lon,
+            });
+            setSelectedStop(locationParam);
+          }
+        } else if (lat && lon && addressParam) {
+          setLocation({
+            lat: parseFloat(lat),
+            lon: parseFloat(lon),
+          });
+          setSelectedStop(null);
+        }
+      } else {
+        // Use state if available
+        setLocation({
+          lat: state.lat,
+          lon: state.lon
+        });
+        if (state.type === 'location') {
+          setSelectedStop(state.label);
+        } else {
+          setSelectedStop(null);
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const [isFadingOut, setIsFadingOut] = useState(false);
 
   const refreshInterval = 30000;
@@ -43,18 +279,19 @@ export default function Home() {
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const lastUpdateRef = useRef<number>(Date.now());
   const [isStopLoading, setIsStopLoading] = useState<boolean>(false);
-  
+
   const [tempAddress, setTempAddress] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
   const [isInvalidAddress, setIsInvalidAddress] = useState<boolean>(false);
-  
+
   const [isChangingLocation, setIsChangingLocation] = useState(false);
   const timerRef = useRef<HTMLSpanElement>(null);
 
+  const [serviceAlert, setServiceAlert] = useState<ServiceAlert | null>(null);
+  const [isAlertPopupOpen, setIsAlertPopupOpen] = useState(false);
+
   useEffect(() => {
-    console.log('🔄 isChangingLocation:', isChangingLocation);
   }, [isChangingLocation]);
 
   useEffect(() => {
@@ -65,7 +302,7 @@ export default function Home() {
         setWindowWidth(width);
       }
     };
-    
+
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [windowWidth]);
@@ -79,31 +316,89 @@ export default function Home() {
     userLocation?: string;
   }
 
+  const fetchServiceAlert = async (routeId: string) => {
+    let cleanRouteId = '';
+
+    try {
+      cleanRouteId = routeId.replace('MTA NYCT_', '').replace('MTABC_', '');
+      const upperRouteId = cleanRouteId.toUpperCase();
+      let fullRouteId = /^(BM|QM|BXM|Q\d+|B\d+|S\d+)/.test(upperRouteId)
+        ? `MTABC_${cleanRouteId}`
+        : `MTA NYCT_${cleanRouteId}`;
+
+      const res = await fetch(`/api/servicealert?routeId=${encodeURIComponent(fullRouteId)}`);
+
+      if (!res.ok) {
+        throw new Error(`Failed to fetch alert for route ${routeId}`);
+      }
+
+      const data = await res.json();
+
+      if (data.situations && data.situations.length > 0) {
+        const formattedAlert: ServiceAlert = {
+          route: cleanRouteId,
+          summary: data.situations[0].summary || '',
+          description: data.situations[0].description || '',
+          creationTime: data.situations[0].creationTime || '',
+          updatedTime: data.situations[0].updatedTime || '',
+          activePeriod: data.situations[0].activePeriod || [],
+          status: data.situations[0].reasonName || '',
+          notice: data.situations[0].advice || '',
+          mapLink: data.situations[0]?.mapLink || ''
+        };
+        setServiceAlert(formattedAlert);
+      } else {
+        // Create a "no alerts" message
+        const noAlertsMessage: ServiceAlert = {
+          route: cleanRouteId,
+          summary: 'No Current Service Alerts',
+          description: 'There are currently no service alerts for this route.',
+          creationTime: new Date().toISOString(),
+          updatedTime: new Date().toISOString(),
+          activePeriod: [],
+          status: 'GOOD_SERVICE',
+          notice: 'Service is operating normally.'
+        };
+        setServiceAlert(noAlertsMessage);
+      }
+
+      setIsAlertPopupOpen(true);
+
+    } catch (error) {
+      console.error('Error fetching service alert:', error);
+      // Create an error message
+      const errorMessage: ServiceAlert = {
+        route: cleanRouteId,
+        summary: 'Error Fetching Service Alerts',
+        description: 'Unable to fetch service alerts at this time.',
+        creationTime: new Date().toISOString(),
+        updatedTime: new Date().toISOString(),
+        activePeriod: [],
+        status: 'ERROR',
+        notice: 'Please try again later.'
+      };
+      setServiceAlert(errorMessage);
+      setIsAlertPopupOpen(true);
+    }
+  };
+
+
   const LoadingAnimation = () => (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        alignItems: "center",
-        height: "100vh",
-        width: "100vw",
-        textAlign: "center",
-        fontFamily: "Helvetica, sans-serif",
-        fontSize: "1.2rem",
-        fontWeight: "500",
-        position: "fixed",
-        top: 0,
-        left: 0,
-        zIndex: 9999,
-        backgroundColor: "white",
-        overflow: "hidden",
-      }}
-    >
+    <div style={{
+      position: "fixed",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "white",
+      zIndex: 1000, // Ensure it's on top
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+    }}>
       <div
         style={{
-          animation: "busDrive 1s infinite cubic-bezier(0.4, 0, 0.2, 1)",
-          marginBottom: "20px",
+          animation: "busDrive 1s infinite cubic-bezier(0.4, 0, 0.2, 1)"
         }}
       >
         <img
@@ -117,29 +412,27 @@ export default function Home() {
         />
       </div>
       <p>Loading bus data...</p>
-  
+
       <style>
         {`
-          @keyframes busDrive {
-            0% {
-              transform: translateY(0);
-              opacity: 1;
-            }
-            50% {
-              transform: translateY(-15px);
-              opacity: 0.9;
-            }
-            100% {
-              transform: translateY(0);
-              opacity: 1;
-            }
-          }
-        `}
+                @keyframes busDrive {
+                    0% {
+                        transform: translateY(0);
+                        opacity: 1;
+                    }
+                    50% {
+                        transform: translateY(-15px);
+                        opacity: 0.9;
+                    }
+                    100% {
+                        transform: translateY(0);
+                        opacity: 1;
+                    }
+                }
+            `}
       </style>
     </div>
   );
-
-
   const BusRoutePopup: React.FC<BusRoutePopupProps> = memo(({
     route,
     stops,
@@ -148,14 +441,14 @@ export default function Home() {
     onClose,
     userLocation,
   }) => {
-    console.log('BusRoutePopup render', { route, currentStop, stops: stops.length });
 
     const isGoingUp = useMemo(() => {
-      console.log('Recalculating isGoingUp');
       return currentStop > stops.length / 2;
     }, [currentStop, stops.length]);
 
     const busIcon = isGoingUp ? "/icons/bus_up.png" : "/icons/bus_down.png";
+
+    const [isScrollableRight, setIsScrollableRight] = useState(false);
 
     const scrollableRef = useRef<HTMLDivElement>(null);
     const [highlightedStop, setHighlightedStop] = useState<string | null>(null);
@@ -163,7 +456,7 @@ export default function Home() {
     // Store the highlighted stop in a ref to avoid recreating the scroll handler
     const highlightedStopRef = useRef(highlightedStop);
     highlightedStopRef.current = highlightedStop;
-    
+
     // Create a stable scroll handler that uses the ref
     const handleScroll = useRef((event: Event) => {
       const scrollEl = event.target as HTMLDivElement;
@@ -186,14 +479,45 @@ export default function Home() {
       }
 
       if (closestStop && closestStop !== highlightedStopRef.current) {
-        console.log('Setting new highlighted stop:', closestStop);
         setHighlightedStop(closestStop);
       }
     }).current;
+    
+    const checkScrollableRight = () => {
+      const el = scrollableRef.current;
+      if (el) {
+        setIsScrollableRight(el.scrollWidth > el.clientWidth + el.scrollLeft);
+      }
+    };
+  
+    useEffect(() => {
+      checkScrollableRight();
+      const el = scrollableRef.current;
+      if (el) {
+        el.addEventListener('scroll', checkScrollableRight);
+        window.addEventListener('resize', checkScrollableRight);
+      }
+      return () => {
+        if (el) el.removeEventListener('scroll', checkScrollableRight);
+        window.removeEventListener('resize', checkScrollableRight);
+      };
+    }, []);
+    useEffect(() => {
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+          setIsAlertPopupOpen(false); // Close Service Alert Popup
+          setSelectedStop(null); // Close Bus Popup (if applicable)
+        }
+      };
+
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }, []);
 
     // Set up scroll listener with cleanup
     useEffect(() => {
-      console.log('Setting up scroll listener');
       const scrollEl = scrollableRef.current;
       if (scrollEl) {
         scrollEl.addEventListener('scroll', handleScroll);
@@ -201,14 +525,12 @@ export default function Home() {
         handleScroll({ target: scrollEl } as unknown as Event);
 
         return () => {
-          console.log('Cleaning up scroll listener');
           scrollEl.removeEventListener('scroll', handleScroll);
         };
       }
     }, []); // Empty dependency array since we're using refs
 
     const stopsList = useMemo(() => {
-      console.log('Recalculating stopsList');
       return stops.map((stop: string, index: number) => (
         <div
           key={`${stop}-${index}`}
@@ -370,26 +692,14 @@ export default function Home() {
       prevProps.userLocation === nextProps.userLocation &&
       prevProps.stops.length === nextProps.stops.length &&
       prevProps.stops.every((stop, index) => stop === nextProps.stops[index]);
-
-    if (!areEqual) {
-      console.log('Props changed:', {
-        routeEqual: prevProps.route === nextProps.route,
-        currentStopEqual: prevProps.currentStop === nextProps.currentStop,
-        destinationEqual: prevProps.destination === nextProps.destination,
-        userLocationEqual: prevProps.userLocation === nextProps.userLocation,
-        stopsLengthEqual: prevProps.stops.length === nextProps.stops.length,
-      });
-    }
     return areEqual;
   });
 
   // Get device location
   useEffect(() => {
     if ("geolocation" in navigator) {
-      console.log("Requesting location...");
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          console.log("Location received:", position.coords);
           setLocation({
             lat: position.coords.latitude,
             lon: position.coords.longitude
@@ -397,7 +707,6 @@ export default function Home() {
           setLocationServicesEnabled(true);
         },
         (error) => {
-          console.log("Location error:", error);
           setLocationServicesEnabled(false);
         },
         {
@@ -407,18 +716,25 @@ export default function Home() {
         }
       );
     } else {
-      console.log("Geolocation not available");
       setLocationServicesEnabled(false);
     }
   }, []);
 
   useEffect(() => {
-    // Check sessionStorage to see if the user came from `/about`
-    const visitedFromAbout = sessionStorage.getItem("visitedFromAbout");
-    
-    if (visitedFromAbout) {
+    if (sessionStorage.getItem("visitedFromHeader")) {
       setIsBannerVisible(false);
-      sessionStorage.removeItem("visitedFromAbout"); // Clear the flag
+      sessionStorage.removeItem("visitedFromHeader");
+    }
+  }, []);
+
+  useEffect(() => {
+    const visitedFromAbout = sessionStorage.getItem("visitedFromAbout");
+    const visitedFromSchedules = sessionStorage.getItem("visitedFromSchedules");
+
+    if (visitedFromAbout || visitedFromSchedules) {
+      setIsBannerVisible(false);
+      sessionStorage.removeItem("visitedFromAbout");
+      sessionStorage.removeItem("visitedFromSchedules");
     } else if (isBannerVisible) {
       const timer = setTimeout(() => {
         setIsBannerVisible(false);
@@ -434,13 +750,13 @@ export default function Home() {
       const fadeTimer = setTimeout(() => {
         setIsFadingOut(true);
       }, 10000);
-  
+
       // Fully hide the banner at 15 seconds
       const hideTimer = setTimeout(() => {
         setIsBannerVisible(false);
         setIsFadingOut(false); // Reset fade-out state
       }, 11000);
-  
+
       return () => {
         clearTimeout(fadeTimer);
         clearTimeout(hideTimer);
@@ -454,43 +770,83 @@ export default function Home() {
     }
   }, []);
   // 🛠️ Log Location State Changes
-    useEffect(() => {
-      console.log('🌍 useEffect Triggered — Location updated:', location.lat, location.lon);
-    }, [location]);
-
-    const fetchBusData = async (lat: number, lon: number) => {
-      setLoading(true);
-      try {
-        console.log('🚍 Fetching bus data for:', lat, lon);
-        
-        // Add a minimum delay of 1 second to ensure animation is visible
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        const res = await fetch(`/api/busdata?lat=${lat}&lon=${lon}`);
-        if (!res.ok) {
-          throw new Error(`Server responded with ${res.status}`);
-        }
-        const json = await res.json();
-        setData(json);
-        setError(null);
-      } catch (err: any) {
-        console.error('❌ Fetch error:', err);
-        setError('Failed to load bus data.');
-      } finally {
-        setLoading(false);
-      }
-    };
+  useEffect(() => {
+  }, [location]);
 
   useEffect(() => {
-    fetchBusData(location.lat, location.lon);
-  }, []);
+    const checkAlerts = async () => {
+      if (!data) return;
+
+      // Get unique route names
+      const uniqueRoutes = new Set<string>();
+      Object.values(data.arrivals || {}).forEach((arrivals: unknown) => {
+        if (Array.isArray(arrivals)) {
+          arrivals.forEach((arrival) => {
+            const route = arrival?.MonitoredVehicleJourney?.LineRef
+              ?.replace("MTA NYCT_", "")
+              .replace("MTABC_", "");
+            if (route) uniqueRoutes.add(route);
+          });
+        }
+      });
+
+      // Check alerts for each route
+      const alertStatuses: Record<string, boolean> = {};
+      await Promise.all([...uniqueRoutes].map(async (route) => {
+        alertStatuses[route] = await checkServiceAlert(route);
+      }));
+
+      setRoutesWithAlerts(alertStatuses);
+    };
+
+    checkAlerts();
+  }, [data]);
+
+  const fetchBusData = async (lat: number, lon: number, isRefresh: boolean = false) => {
+  
+    if (!isRefresh) {
+      setLoading(true);
+    } else {
+      setIsRefreshing(true);
+    }
+
+    try {
+      // Only add minimum loading time for non-refresh operations
+      const fetchPromise = fetch(`/api/busdata?lat=${lat}&lon=${lon}`);
+      const [res] = await Promise.all([
+        fetchPromise,
+        !isRefresh ? new Promise(resolve => setTimeout(resolve, 1000)) : Promise.resolve()
+      ]);
+
+      if (!res.ok) {
+        throw new Error(`Server responded with ${res.status}`);
+      }
+      const json = await res.json();
+      setData(json);
+      setError(null);
+    } catch (err: any) {
+      console.error('❌ Fetch error:', err);
+      setError('Failed to load bus data.');
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+      setIsLocationChanging(false);
+      setIsChanging(false);
+    }
+  };
+
+  useEffect(() => {
+    console.log("📍 Location changed:", location);
+    setIsChanging(true);
+    fetchBusData(location.lat, location.lon, false); // Explicitly mark as not a refresh
+  }, [location]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       setIsMobile(window.matchMedia("(pointer: coarse)").matches);
     }
   }, []);
-  
+
   useEffect(() => {
     if (isMobile) {
       const hideAddressBar = () => window.scrollTo(0, 1);
@@ -520,7 +876,7 @@ export default function Home() {
           } catch (error) {
             console.error('Error fetching suggestions:', error);
           }
-        } 
+        }
       } else {
         setAddressSuggestions([]);
       }
@@ -530,23 +886,22 @@ export default function Home() {
     return () => clearTimeout(timeoutId);
   }, [tempAddress]);
   useEffect(() => {
-  const ticker = setInterval(() => {
-    const elapsed = (Date.now() - lastUpdateRef.current) / 1000;
-    const remain = refreshInterval / 1000 - elapsed;
-    if (remain <= 0) {
-      lastUpdateRef.current = Date.now();
-      setTimeRemaining(refreshInterval / 1000);
-      fetchBusData(location.lat, location.lon);
-    } else {
-      // Update DOM directly instead of state to prevent re-renders
-      if (timerRef.current) {
-        timerRef.current.textContent = Math.ceil(remain).toString();
+    const ticker = setInterval(() => {
+      const elapsed = (Date.now() - lastUpdateRef.current) / 1000;
+      const remain = refreshInterval / 1000 - elapsed;
+      if (remain <= 0) {
+        lastUpdateRef.current = Date.now();
+        setTimeRemaining(refreshInterval / 1000);
+        fetchBusData(location.lat, location.lon, true); // Add true flag for refresh
+      } else {
+        if (timerRef.current) {
+          timerRef.current.textContent = Math.ceil(remain).toString();
+        }
       }
-    }
-  }, 1000);
-  return () => clearInterval(ticker);
-}, [location.lat, location.lon]);
-  
+    }, 1000);
+    return () => clearInterval(ticker);
+  }, [location.lat, location.lon]);
+
   if (error) {
     return (
       <div style={{ padding: 20, textAlign: "center", fontFamily: "Helvetica, sans-serif" }}>
@@ -554,7 +909,9 @@ export default function Home() {
       </div>
     );
   }
-  if (loading && !data) {
+
+
+  if ((loading || isLocationChanging) && !isRefreshing) {
     return <LoadingAnimation />;
   }
   if (!data) {
@@ -563,6 +920,7 @@ export default function Home() {
       </div>
     );
   }
+
 
   let stopsSorted = [...(data.stops || [])].sort((a, b) => {
     const distA = a.distance ?? 99999;
@@ -615,7 +973,8 @@ export default function Home() {
 
       let route = "Unknown Route";
       if (mvj.LineRef) {
-        route = mvj.LineRef.replace("MTA NYCT_", "");
+        route = mvj.LineRef.replace("MTA NYCT_", "")
+          .replace("MTABC_", "");
       }
 
       const destination = mvj.DestinationName || "Unknown Destination";
@@ -653,476 +1012,488 @@ export default function Home() {
     if (diffMin >= 60) return ">1 hr";
     return diffMin + " min away";
   }
-  
+
 
   return (
     <BusPopupProvider>
-    <BusContent>
-      {(showBusInfo) => (
-        <div style={{ 
-          display: "flex", 
-          flexDirection: "column", 
-          minHeight: "100vh",
-          overflowY: "auto", // Enable vertical scrolling
-          position: "relative" // Add this to ensure proper stacking
-        }}>
-          <div style={{ 
-            padding: 20,
-            textAlign: "center",
-            maxWidth: "100vw",
+      {isAlertPopupOpen && serviceAlert && (
+        <ServiceAlertPopup
+          alert={serviceAlert}
+          onClose={() => {
+            setIsAlertPopupOpen(false);
+            setServiceAlert(null);
+          }}
+        />
+      )}
+      <BusContent>
+        {(showBusInfo) => (
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
             minHeight: "100vh",
             overflowY: "auto",
-            WebkitOverflowScrolling: "touch",
-            display: "flex",
-            flexDirection: "column"
-          }} className={inter.className}>
-            {isBannerVisible && !locationServicesEnabled && (
-  <div
-    style={{
-      backgroundColor: "#FFCCBB",
-      color: "#FF3632",
-      padding: "8px 12px",
-      borderRadius: "8px",
-      display: "flex",
-      alignItems: "center",
-      gap: "8px",
-      position: "absolute",
-      top: "20px",
-      left: "50%",
-      transform: "translateX(-50%)",
-      zIndex: 1500,
-      textAlign: "center",
-      width: "90%",
-      maxWidth: "100vw",
-      boxSizing: "border-box",
-      transition: "opacity 1s ease-in-out",
-      opacity: isFadingOut ? 0 : 1,
-      wordWrap: "break-word",
-      whiteSpace: "normal",
-      lineHeight: "1.4",
-      fontSize: "0.95rem",
-    }}
-  >
-    <span
-      style={{
-        fontWeight: "bold",
-        whiteSpace: "normal",
-        wordWrap: "break-word",
-        textAlign: "center",
-        flex: 1,
-      }}
-    >
-      📍 Please turn on location services to get information for the closest stops to you!
-    </span>
-    <button
-      onClick={() => setIsBannerVisible(false)}
-      style={{
-        background: "none",
-        border: "none",
-        fontSize: "1.2rem",
-        cursor: "pointer",
-        marginLeft: "8px",
-        color: "#FF3632",
-        flexShrink: 0,
-      }}
-    >
-      ×
-    </button>
-  </div>
-)}
-
-
-            {!locationServicesEnabled && (
-              <div style={{ marginTop: isBannerVisible ? "50px" : "0" }} />
-            )}
-
+            position: "relative",
+          }}>
             <div style={{
-              marginBottom: 0,
+              padding: 20,
               textAlign: "center",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center"
-            }}>
-              <div style={{
-                marginBottom: 20,
-                display: "flex",
-                flexDirection: windowWidth < 768 ? "column" : "row",
-                justifyContent: "center",
-                alignItems: "center",
-                gap: "8px"
-              }}>
-                <span style={{
-                  fontSize: "1.2rem",
-                  fontWeight: "bold",
-                  marginBottom: windowWidth < 768 ? "10px" : "0"
-                }}>
-                  Bus routes near
-                </span>
-                <LocationDropdown 
-  onLocationChange={(newLocation) => {
-    console.log('📍 onLocationChange called with:', newLocation);
-    if (newLocation.lat !== null && newLocation.lon !== null) {
-      console.log('✅ Valid location:', newLocation);
-      setIsChangingLocation(true); // Start animation
-      
-      setLocation({
-        lat: newLocation.lat,
-        lon: newLocation.lon
-      });
-
-      fetchBusData(newLocation.lat, newLocation.lon)
-        .finally(() => {
-          setTimeout(() => {
-            console.log('🛑 Animation completed, setting isChangingLocation to false');
-            setIsChangingLocation(false); // End animation after 2s
-          }, 2000); // Match animation duration
-        });
-
-      console.log('🚦 isChangingLocation set to:', true);
-    } else {
-      console.warn('⚠️ Invalid location coordinates:', newLocation);
-    }
-  }}
-/>
-
-              </div>
-            </div>
-
-            <div style={{
-              overflow: "hidden",
               maxWidth: "100vw",
-              scrollSnapType: isMobile ? "x mandatory" : "none",
-              margin: "0 -20px",
-              padding: "0 20px"
-            }}></div>
-
-            {!isInvalidAddress && data && finalStops.length > 0 && (
-              <p className="dark:text-white" style={{ marginBottom: 20 }}>
-                <strong>Updated: {updatedTimeString}</strong> (next refresh in <span ref={timerRef}>{timeRemaining}</span>s)
-              </p>
-            )}
-
-            {isStopLoading && (
+              minHeight: "calc(100vh - 60px)", // Reduce white space
+              overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "flex-start", // Align content to the top
+              gap: "8px",
+            }} className={inter.className}>
+              {isBannerVisible && !locationServicesEnabled && (
+                <div
+                  style={{
+                    backgroundColor: "rgba(255, 204, 187, 0.9)",
+                    color: "#FF3632",
+                    padding: "8px 12px",
+                    borderRadius: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    position: "absolute",
+                    top: "20px",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    zIndex: 1500,
+                    textAlign: "center",
+                    width: windowWidth < 768 ? "90%" : "auto",  // Full width on mobile/tablet, auto on desktop
+                    maxWidth: windowWidth < 768 ? "100%" : "90%", // Adjust max-width based on screen size
+                    boxSizing: "border-box",
+                    transition: "opacity 1s ease-in-out",
+                    opacity: isFadingOut ? 0 : 1,
+                    wordWrap: "break-word",
+                    whiteSpace: "normal",
+                    lineHeight: "1.4",
+                    fontSize: "0.95rem",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontWeight: "bold",
+                      whiteSpace: "normal",
+                      wordWrap: "break-word",
+                      textAlign: "center",
+                      flex: 1,
+                    }}
+                  >
+                    📍 Please turn on location services to get information for the closest stops to you!
+                  </span>
+                  <button
+                    onClick={() => setIsBannerVisible(false)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      fontSize: "1.2rem",
+                      cursor: "pointer",
+                      marginLeft: "8px",
+                      color: "#FF3632",
+                      flexShrink: 0,
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
               <div style={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "4px",
-                backgroundColor: "#ccc",
-                zIndex: 1000,
-                overflow: "hidden"
-              }}>
+                overflow: "hidden",
+                maxWidth: "100vw",
+                scrollSnapType: isMobile ? "x mandatory" : "none",
+                margin: "0 -20px",
+                padding: "0 20px"
+              }}></div>
+
+              {!isInvalidAddress && data && finalStops.length > 0 && (
+                <div style={{ position: "relative" }}>
+                  <p
+                    className="dark:text-white"
+                    style={{
+                      margin: "8px 0", // Reduced margin
+                      marginTop: "-10px",
+                      textAlign: "center",
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      gap: "4px", // Tighter gap
+                      fontSize: "0.9rem", // Slightly smaller font size
+                      lineHeight: "1.2", // Compact line spacing
+                      marginBottom: "10px",
+                    }}
+                  >
+                    <span style={{ fontSize: "1.5rem", lineHeight: "1" }}>⏳</span>
+                    <strong style={{ fontSize: "1rem" }}>Updated: {updatedTimeString}</strong>
+                    <span>(next refresh in <span ref={timerRef}>{timeRemaining}</span>s)</span>
+                  </p>
+                </div>
+              )}
+
+              {isStopLoading && (
                 <div style={{
+                  position: "fixed",
+                  top: 0,
+                  left: 0,
                   width: "100%",
-                  height: "100%",
-                  backgroundColor: "#0078D7",
-                  animation: "progressBar 1s linear infinite"
-                }} />
-                <style>
-                  {`
+                  height: "4px",
+                  backgroundColor: "#ccc",
+                  zIndex: 1000,
+                  overflow: "hidden"
+                }}>
+                  <div style={{
+                    width: "100%",
+                    height: "100%",
+                    backgroundColor: "#0078D7",
+                    animation: "progressBar 1s linear infinite"
+                  }} />
+                  <style>
+                    {`
                     @keyframes progressBar {
                       0% { transform: translateX(-100%); }
                       100% { transform: translateX(100%); }
                     }
                   `}
-                </style>
-              </div>
-            )}
-
-            <div style={{
-              display: "flex",
-              overflowX: "auto",
-              overflowY: "hidden",
-              gap: "16px",
-              touchAction: "pan-x",
-              WebkitOverflowScrolling: "touch",
-              scrollSnapType: isMobile ? "x mandatory" : "none",
-              margin: "0 -20px",
-              padding: "0 20px",
-              height: "calc(100vh - 200px)",
-              boxSizing: "border-box",
-              marginBottom: "20px"
-            }}>
-              {data && finalStops.length === 0 && (
-                <div style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  textAlign: 'center',
-                  padding: '20px'
-                }}>
-                  <p style={{ marginBottom: '10px' }}>
-                    Whoops! Looks like the address you entered is invalid. Please enter a valid address.
-                  </p>
-                  <p style={{ color: '#666' }}>
-                    ex. 20 W 34th St. New York, New York 10001
-                  </p>
+                  </style>
                 </div>
               )}
-              {finalStops.map((stop: any) => {
-                const arrivalsArray = data.arrivals?.[stop.stopId] || [];
-                const hasBuses = arrivalsArray.length > 0;
-                const routeMap = getStopArrivals(stop.stopId);
-                const hasMultipleRoutes = Object.keys(routeMap).length > 1;
 
-                return (
-                  <div
-                    key={stop.stopId}
-                    style={{
-                      scrollSnapAlign: isMobile ? "center" : "none",
-                      width: isMobile ? "calc(100vw - 40px)" : "360px",
-                      minWidth: isMobile ? "calc(100vw - 40px)" : "360px",
-                      maxWidth: "360px",
-                      height: "100%",
-                      backgroundColor: "#D3D3D3",
-                      borderRadius: "8px",
-                      padding: "16px",
-                      boxSizing: "border-box",
-                      overflowY: "auto",
-                      marginBottom: "20px",
-                      color: "black",
-                      flexShrink: 0,
-                      display: "flex",
-                      flexDirection: "column"
-                    }}
-                  >
-                    <h2 style={{ fontSize: "1.3rem", fontWeight: "bold" }}>
-                      {stop.stopName}{" "}
-                      {stop.distance != null
-                        ? `(${stop.distance} miles away)`
-                        : "(distance unknown)"}
-                    </h2>
+<div
+  ref={scrollContainerRef}
+  style={{
+    display: "flex",
+    overflowX: "auto",
+    overflowY: "hidden",
+    gap: "16px",
+    touchAction: "pan-x",
+    WebkitOverflowScrolling: "touch",
+    scrollSnapType: isMobile ? "x mandatory" : "none",
+    margin: "0 -20px",
+    padding: "0 10px",
+    height: "calc(100vh - 100px)",
+    boxSizing: "border-box",
+    marginBottom: "20px",
+    position: "relative",
+  }}
+>
+                {data && finalStops.length === 0 && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    textAlign: 'center',
+                    padding: '20px'
+                  }}>
+                    <p style={{ marginBottom: '10px' }}>
+                      Whoops! Looks like the address you entered is invalid. Please enter a valid address.
+                    </p>
+                    <p style={{ color: '#666' }}>
+                      ex. 20 W 34th St. New York, New York 10001
+                    </p>
+                  </div>
+                )}
+                
+                {finalStops.map((stop: any) => {
+                  const arrivalsArray = data.arrivals?.[stop.stopId] || [];
+                  const hasBuses = arrivalsArray.length > 0;
+                  const routeMap = getStopArrivals(stop.stopId);
+                  const hasMultipleRoutes = Object.keys(routeMap).length > 1;
 
-                    {!hasBuses && (
-                      <p style={{
-                        fontStyle: "italic",
+                  return (
+                    <div
+                      key={stop.stopId}
+                      style={{
+                        scrollSnapAlign: isMobile ? "center" : "none",
+                        width: isMobile ? "calc(100vw - 40px)" : "360px",
+                        minWidth: isMobile ? "calc(100vw - 40px)" : "360px",
+                        maxWidth: "360px",
+                        height: "100%",
+                        backgroundColor: "#D3D3D3",
+                        borderRadius: "8px",
+                        padding: "8px",
+                        boxSizing: "border-box",
+                        overflowY: "auto",
+                        marginBottom: "20px",
+                        color: "black",
+                        flexShrink: 0,
                         display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        marginTop: 50,
+                        flexDirection: "column"
+                      }}
+                    >
+                      <h2 style={{ fontSize: "1.3rem", fontWeight: "bold" }}>
+                        <span style={{ fontSize: "1.8rem" }}>🚏</span>
+                        {stop.stopName}{" "}
+                        {stop.distance != null
+                          ? `(${stop.distance} miles away)`
+                          : "(distance unknown)"}
+                      </h2>
+                      <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      // marginTop: '4px',
+                    }}>
+                      <span style={{
+                        fontWeight: 'bold',
+                        fontSize: '1rem',
+                        color: '#333',
                       }}>
-                        No buses en-route to this stop
-                      </p>
-                    )}
+                        Directions:
+                      </span>
+                      <NavigationButtons 
+                        stopName={stop.stopName}
+                        lat={Number(stop.lat)} 
+                        lon={Number(stop.lon)} 
+                      />
+                    </div>
 
-                    {hasBuses && (
-                      <div style={{ flex: 1 }}>
-                        {Object.entries(routeMap).map(([routeName, directions]) => (
-                          <div
-                            key={routeName}
-                            style={{
-                              margin: "16px auto",
-                              backgroundColor: "#2360A5",
-                              borderRadius: "8px",
-                              color: "white",
-                              fontWeight: "bold",
-                              padding: "8px",
-                              display: "flex",
-                              flexDirection: "column",
-                              alignItems: "center",
-                            }}
-                          >
-                            <div style={{ marginBottom: 8 }}>{routeName}</div>
-                            {Object.entries(directions).map(
-                              ([directionKey, visitsArr]) => (
-                                <div
-                                  key={directionKey}
-                                  style={{
-                                    marginTop: 8,
-                                    backgroundColor: "white",
-                                    color: "black",
-                                    fontWeight: "normal",
-                                    borderRadius: 8,
-                                    padding: 8,
-                                    width: "100%",
-                                    maxWidth: 300,
-                                    textAlign: "center",
-                                  }}
-                                >
-                                  <strong>{directionKey}</strong>
-                                  <ul style={{ listStyle: "none", paddingLeft: 0 }}>
-                                    {visitsArr.sort((a: any, b: any) => {
-                                      const aStops = a.MonitoredVehicleJourney?.MonitoredCall?.Extensions?.Distances?.StopsFromCall || 0;
-                                      const bStops = b.MonitoredVehicleJourney?.MonitoredCall?.Extensions?.Distances?.StopsFromCall || 0;
-                                      return aStops - bStops;
-                                    })
-                                      .map((visit: any, i: number) => {
-                                        const mvj = visit.MonitoredVehicleJourney;
-                                        const vehicleRef = visit.vehicleRef || 'Unknown VehicleRef';
-                                        let stopsAway = -1;
-                                        const distances =
-                                          mvj?.MonitoredCall?.Extensions?.Distances;
-                                        if (
-                                          distances &&
-                                          typeof distances.StopsFromCall === "number"
-                                        ) {
-                                          stopsAway = distances.StopsFromCall;
-                                        }
+                      {!hasBuses && (
+                        <p style={{
+                          fontStyle: "italic",
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          marginTop: 50,
+                        }}>
+                          No buses en-route to this stop
+                        </p>
+                      )}
 
-                                        let arrivalTime = "";
-                                        const expectedTime =
-                                          mvj?.MonitoredCall?.ExpectedArrivalTime;
-                                        if (expectedTime) {
-                                          arrivalTime = new Date(
-                                            expectedTime
-                                          ).toLocaleTimeString([], {
-                                            hour: "2-digit",
-                                            minute: "2-digit",
-                                          });
-                                        }
+                      {hasBuses && (
+                        <div style={{ flex: 1 }}
+                        >
+                          {Object.entries(routeMap).map(([routeName, directions]) => (
+                            <div
+                              key={routeName}
+                              style={{
+                                margin: "16px auto",
+                                backgroundColor: "#2360A5",
+                                borderRadius: "8px",
+                                color: "white",
+                                fontWeight: "bold",
+                                padding: "8px",
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                position: "relative",
+                              }}
+                            >
+                              <div style={{ marginBottom: 8 }}>
+                                {routeName}
+                                {routesWithAlerts[routeName] && (
+                                  <span
+                                    onClick={() => {
+                                      fetchServiceAlert(routeName);
+                                    }}
+                                    style={{
+                                      marginLeft: "4px",
+                                      cursor: "pointer",
+                                    }}
+                                    title="View Service Alerts"
+                                  >
+                                    ⚠️
+                                  </span>
+                                )}
+                              </div>
 
-                                        const occupancy = mvj?.Occupancy || null;
+                              {Object.entries(directions).map(
+                                ([directionKey, visitsArr]) => (
+                                  <div
+                                    key={directionKey}
+                                    style={{
+                                      marginTop: 8,
+                                      backgroundColor: "white",
+                                      color: "black",
+                                      fontWeight: "normal",
+                                      borderRadius: 8,
+                                      padding: 8,
+                                      width: "100%",
+                                      maxWidth: 300,
+                                      textAlign: "center",
+                                    }}
+                                  >
+                                    <strong> 📍 {directionKey}</strong>
+                                    <ul style={{ listStyle: "none", paddingLeft: 0 }}>
+                                      {visitsArr.sort((a: any, b: any) => {
+                                        const aStops = a.MonitoredVehicleJourney?.MonitoredCall?.Extensions?.Distances?.StopsFromCall || 0;
+                                        const bStops = b.MonitoredVehicleJourney?.MonitoredCall?.Extensions?.Distances?.StopsFromCall || 0;
+                                        return aStops - bStops;
+                                      })
+                                        .map((visit: any, i: number) => {
+                                          const mvj = visit.MonitoredVehicleJourney;
+                                          const vehicleRef = visit.vehicleRef || 'Unknown VehicleRef';
+                                          let stopsAway = -1;
+                                          const distances =
+                                            mvj?.MonitoredCall?.Extensions?.Distances;
+                                          if (
+                                            distances &&
+                                            typeof distances.StopsFromCall === "number"
+                                          ) {
+                                            stopsAway = distances.StopsFromCall;
+                                          }
 
-                                        let minutesAwayString: string | null = null;
-                                        if (expectedTime) {
-                                          minutesAwayString = getMinutesAway(
-                                            expectedTime
-                                          );
-                                        }
-                                        return (
-                                          <li
-                                            key={i}
-                                            onClick={async () => {
-                                              try {
-                                                const direction = stop.direction || 'uptown';
-                                                const stops = await fetchRouteStops(routeName, stop.stopName);
-                                                console.log('🚏 Clicked Stop Name:', stop.stopName);
-                                                const stopArrivals = data.arrivals?.[stop.stopId] || [];
+                                          let arrivalTime = "";
+                                          const expectedTime =
+                                            mvj?.MonitoredCall?.ExpectedArrivalTime;
+                                          if (expectedTime) {
+                                            arrivalTime = new Date(
+                                              expectedTime
+                                            ).toLocaleTimeString([], {
+                                              hour: "2-digit",
+                                              minute: "2-digit",
+                                            });
+                                          }
 
-                                                // console.log('🚍 Stop Arrivals:', stopArrivals);
-                                                // console.log('🔍 Clicked VehicleRef:', visit.vehicleRef);
+                                          const occupancy = mvj?.Occupancy || null;
 
-                                                // Attempt to match VehicleRef including prefix
-                                                const selectedArrival = stopArrivals.find((arrival: any) => {
-                                                  const arrivalVehicleRef = arrival?.MonitoredVehicleJourney?.VehicleRef?.toString()?.trim();
-                                                  const clickedVehicleRef = visit.vehicleRef?.toString()?.trim();
+                                          let minutesAwayString: string | null = null;
+                                          if (expectedTime) {
+                                            minutesAwayString = getMinutesAway(
+                                              expectedTime
+                                            );
+                                          }
+                                          return (
+                                            <li
+                                              key={i}
+                                              onClick={async () => {
+                                                try {
+                                                  const direction = stop.direction || 'uptown';
+                                                  const stops = await fetchRouteStops(routeName, stop.stopName);
+                                                  const stopArrivals = data.arrivals?.[stop.stopId] || [];
 
-                                                  // console.log(`🔄 Comparing Arrival VehicleRef: ${arrivalVehicleRef} with Clicked VehicleRef: ${clickedVehicleRef}`);
+                                                  // Attempt to match VehicleRef including prefix
+                                                  const selectedArrival = stopArrivals.find((arrival: any) => {
+                                                    const arrivalVehicleRef = arrival?.MonitoredVehicleJourney?.VehicleRef?.toString()?.trim();
+                                                    const clickedVehicleRef = visit.vehicleRef?.toString()?.trim();
+                                                    return (
+                                                      arrivalVehicleRef === clickedVehicleRef ||
+                                                      arrivalVehicleRef?.includes(clickedVehicleRef) ||
+                                                      clickedVehicleRef?.includes(arrivalVehicleRef)
+                                                    );
+                                                  });
 
-                                                  return (
-                                                    arrivalVehicleRef === clickedVehicleRef ||
-                                                    arrivalVehicleRef?.includes(clickedVehicleRef) ||
-                                                    clickedVehicleRef?.includes(arrivalVehicleRef)
-                                                  );
-                                                });
-
-                                                if (!selectedArrival) {
-                                                  console.warn('⚠️ No matching arrival found for VehicleRef:', visit.vehicleRef);
-                                                  console.warn('🚨 Available VehicleRefs in StopArrivals:', stopArrivals.map((a: any) => a?.MonitoredVehicleJourney?.VehicleRef));
-                                                }
-
-                                                let stopsAway = 0;
-
-                                                if (selectedArrival) {
-                                                  const distances = selectedArrival?.MonitoredVehicleJourney?.MonitoredCall?.Extensions?.Distances;
-                                                  if (distances?.StopsFromCall != null) {
-                                                    stopsAway = distances.StopsFromCall;
-                                                  } else if (distances?.DistanceFromCall != null) {
-                                                    const averageStopDistance = 500; // Average stop distance in meters
-                                                    stopsAway = Math.round(distances.DistanceFromCall / averageStopDistance);
+                                                  if (!selectedArrival) {
+                                                    console.warn('⚠️ No matching arrival found for VehicleRef:', visit.vehicleRef);
+                                                    console.warn('🚨 Available VehicleRefs in StopArrivals:', stopArrivals.map((a: any) => a?.MonitoredVehicleJourney?.VehicleRef));
                                                   }
+
+                                                  let stopsAway = 0;
+
+                                                  if (selectedArrival) {
+                                                    const distances = selectedArrival?.MonitoredVehicleJourney?.MonitoredCall?.Extensions?.Distances;
+                                                    if (distances?.StopsFromCall != null) {
+                                                      stopsAway = distances.StopsFromCall;
+                                                    } else if (distances?.DistanceFromCall != null) {
+                                                      const averageStopDistance = 500; // Average stop distance in meters
+                                                      stopsAway = Math.round(distances.DistanceFromCall / averageStopDistance);
+                                                    }
+                                                  }
+
+                                                  console.log(
+                                                    `🚍 Stops Away Calculated: ${stopsAway}, VehicleRef: ${visit.vehicleRef || 'Unknown VehicleRef'}`
+                                                  );
+
+                                                  showBusInfo(
+                                                    routeName,
+                                                    stops,
+                                                    stopsAway,
+                                                    selectedArrival?.MonitoredVehicleJourney?.DestinationName || "Unknown Destination",
+                                                    stop.stopName,
+                                                    selectedStop || stop.stopName,
+                                                    stopsAway,
+                                                    visit.vehicleRef // Pass VehicleRef explicitly
+                                                  );
+                                                } catch (error) {
+                                                  console.error('🚨 Error fetching stop data:', error);
                                                 }
+                                              }}
 
-                                                console.log(
-                                                  `🚍 Stops Away Calculated: ${stopsAway}, VehicleRef: ${visit.vehicleRef || 'Unknown VehicleRef'}`
-                                                );
-
-                                                showBusInfo(
-                                                  routeName,
-                                                  stops,
-                                                  stopsAway,
-                                                  selectedArrival?.MonitoredVehicleJourney?.DestinationName || "Unknown Destination",
-                                                  stop.stopName,
-                                                  selectedStop || stop.stopName,
-                                                  stopsAway,
-                                                  visit.vehicleRef // Pass VehicleRef explicitly
-                                                );
-                                              } catch (error) {
-                                                console.error('🚨 Error fetching stop data:', error);
-                                              }
-                                            }}
-
-                                            style={{
-                                              margin: "8px 0",
-                                              backgroundColor: "white",
-                                              borderRadius: "8px",
-                                              boxShadow: "0 4px 8px rgba(0, 0, 0, 0.15)",
-                                              padding: "12px",
-                                              textAlign: "center",
-                                              cursor: "pointer",
-                                              transition: "transform 0.2s",
-                                            }}
-                                          >
-                                            <div style={{ fontWeight: "bold" }}>
-                                              {stopsAway === 0 ? (
-                                                <span>
-                                                  about <strong>&lt;1</strong> stop away
-                                                </span>
-                                              ) : stopsAway === 1 ? (
-                                                <span>
-                                                  about <strong>1</strong> stop away
-                                                </span>
-                                              ) : stopsAway > 1 ? (
-                                                <span>
-                                                  about <strong>{stopsAway}</strong> stops away
-                                                </span>
-                                              ) : (
-                                                <>?? stops away</>
-                                              )}
-                                            </div>
-                                            {arrivalTime ? (
-                                              <div style={{ marginTop: "4px", fontSize: "0.9em" }}>
-                                                Arriving at approx <strong>{arrivalTime}</strong>
-                                                {minutesAwayString && (
-                                                  <> ({minutesAwayString})</>
+                                              style={{
+                                                margin: "8px 0",
+                                                backgroundColor: "white",
+                                                borderRadius: "8px",
+                                                boxShadow: "0 4px 8px rgba(0, 0, 0, 0.15)",
+                                                padding: "12px",
+                                                textAlign: "center",
+                                                cursor: "pointer",
+                                                transition: "transform 0.2s",
+                                              }}
+                                            >
+                                              <div style={{
+                                                fontWeight: "bold",
+                                                color: stopsAway <= 1 ? "green" : stopsAway <= 5 ? "orange" : "inherit"
+                                              }}>
+                                                {stopsAway === 0 ? (
+                                                  <span>
+                                                    about <strong>&lt;1</strong> stop away
+                                                  </span>
+                                                ) : stopsAway === 1 ? (
+                                                  <span>
+                                                    about <strong>1</strong> stop away
+                                                  </span>
+                                                ) : stopsAway > 1 ? (
+                                                  <span>
+                                                    about <strong>{stopsAway}</strong> stops away
+                                                  </span>
+                                                ) : (
+                                                  <>?? stops away</>
                                                 )}
                                               </div>
-                                            ) : (
-                                              <div style={{ marginTop: "4px", fontSize: "0.9em" }}>
-                                                Arrival time unknown
-                                              </div>
-                                            )}
-                                            {occupancy && (
-                                              <div style={{ marginTop: "4px", fontSize: "0.9em" }}>
-                                                Occupancy: <strong>{occupancy}</strong>
-                                              </div>
-                                            )}
-                                            {vehicleRef && (
-                                              <div style={{ marginTop: "4px", fontSize: "0.9em", color: "#757575" }}>
-                                                Bus ID: <strong>{vehicleRef}</strong>
-                                              </div>
-                                            )}
-                                          </li>
-                                        );
-                                      })}
-                                  </ul>
-                                </div>
-                              )
-                            )}
-                          </div>
-                        ))}
-                        {!hasMultipleRoutes && hasBuses && (
-                          <p style={{
-                            marginTop: 8,
-                            fontStyle: "italic",
-                            color: "black",
-                            fontSize: "0.9em"
-                          }}>
-                            Additional routes will be shown here if available
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                                              {arrivalTime ? (
+                                                <div style={{ marginTop: "4px", fontSize: "0.9em" }}>
+                                                  Arriving at approx <strong>{arrivalTime}</strong>
+                                                  {minutesAwayString && (
+                                                    <> ({minutesAwayString})</>
+                                                  )}
+                                                </div>
+                                              ) : (
+                                                <div style={{ marginTop: "4px", fontSize: "0.9em" }}>
+                                                  Arrival time unknown
+                                                </div>
+                                              )}
+                                              {occupancy && (
+                                                <div style={{ marginTop: "4px", fontSize: "0.9em" }}>
+                                                  Occupancy: <strong>{occupancy}</strong>
+                                                </div>
+                                              )}
+                                              {vehicleRef && (
+                                                <div style={{ marginTop: "4px", fontSize: "0.9em", color: "#757575" }}>
+                                                  Bus ID: <strong>{vehicleRef}</strong>
+                                                </div>
+                                              )}
+                                            </li>
+                                          );
+                                        })}
+                                    </ul>
+                                  </div>
+                                )
+                              )}
+                            </div>
+                          ))}
+                          {!hasMultipleRoutes && hasBuses && (
+                            <p style={{
+                              marginTop: 8,
+                              fontStyle: "italic",
+                              color: "black",
+                              fontSize: "0.9em"
+                            }}>
+                              Additional routes will be shown here if available
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-            </div>
-        </div>
-      )}
-    </BusContent>
-  </BusPopupProvider>
-);
+          </div>
+        )}
+      </BusContent>
+    </BusPopupProvider>
+  );
 }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Select from 'react-select';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
 interface LocationOption {
   label: string;
@@ -72,11 +73,19 @@ const BUS_STOP_LOCATIONS = [
   
   
   interface LocationDropdownProps {
-    selectedStop?: string | null; // Optional selectedStop prop
+    selectedStop?: string | null;
     onLocationChange: (newLocation: { lat: number | null; lon: number | null }) => void;
+    isLocationChanging: boolean;
+    setIsLocationChanging: (value: boolean) => void;
   }  
 
-const LocationDropdown: React.FC<LocationDropdownProps> = ({ onLocationChange }) => {
+  const LocationDropdown: React.FC<LocationDropdownProps> = ({ 
+    onLocationChange,
+    isLocationChanging,
+    setIsLocationChanging
+  }) => {
+    console.log("📍 isLocationChanging in LocationDropdown:", isLocationChanging);
+
   const onLocationChangeRef = useRef(onLocationChange);
 
   useEffect(() => {
@@ -114,7 +123,44 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({ onLocationChange })
     label: location.label,
     isAddressSearch: location.lat === null
   }));
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
+  useEffect(() => {
+    const locationParam = searchParams.get('location');
+    const addressParam = searchParams.get('address');
+    const lat = searchParams.get('lat');
+    const lon = searchParams.get('lon');
+
+    if (locationParam) {
+      // Handle predefined location
+      const predefinedLocation = BUS_STOP_LOCATIONS.find(
+        loc => loc.label === decodeURIComponent(locationParam)
+      );
+      
+      if (predefinedLocation) {
+        setSelectedValue({
+          value: predefinedLocation,
+          label: predefinedLocation.label,
+          isCustomAddress: false
+        });
+      }
+    } else if (addressParam && lat && lon) {
+      // Handle custom address
+      setSelectedValue({
+        value: {
+          lat: parseFloat(lat),
+          lon: parseFloat(lon),
+          label: decodeURIComponent(addressParam)
+        },
+        label: decodeURIComponent(addressParam),
+        isCustomAddress: true
+      });
+    }
+  }, [searchParams]);
+
+  // Then modify the useEffect for fetching suggestions
   useEffect(() => {
     const fetchSuggestions = async () => {
       if (isAddressMode && inputValue.length > 3) {
@@ -141,11 +187,24 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({ onLocationChange })
             isCustomAddress: true
           }));
           setAddressSuggestions(suggestions);
-
+  
           if (suggestions.length === 1) {
             const suggestion = suggestions[0];
             setSelectedValue(suggestion);
             localStorage.setItem('selectedLocation', JSON.stringify(suggestion));
+            
+            const url = new URL(window.location.href);
+            url.searchParams.delete('lat');
+            url.searchParams.delete('lon');
+            url.searchParams.delete('address');
+            url.searchParams.delete('location');
+            
+            url.searchParams.set('lat', suggestion.value.lat.toString());
+            url.searchParams.set('lon', suggestion.value.lon.toString());
+            url.searchParams.set('address', suggestion.value.label);
+            
+            router.replace(url.pathname + url.search);
+  
             onLocationChangeRef.current({
               lat: suggestion.value.lat,
               lon: suggestion.value.lon
@@ -159,44 +218,82 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({ onLocationChange })
         setAddressSuggestions([]);
       }
     };
-
+  
     const timeoutId = setTimeout(fetchSuggestions, 300);
     return () => clearTimeout(timeoutId);
-  }, [inputValue, isAddressMode]);
+  }, [inputValue, isAddressMode, pathname, router]);
 
   const handleInputChange = (newValue: string) => {
     setInputValue(newValue);
     setIsAddressMode(true);
   };
 
+  const handleSelectChange = (selectedOption: any) => {
+    console.log("🎯 handleSelectChange triggered in LocationDropdown");
+    setSelectedValue(selectedOption);
+    
+    if (selectedOption) {
+      localStorage.setItem('selectedLocation', JSON.stringify(selectedOption));
+      if (selectedOption.value.lat && selectedOption.value.lon) {
+        console.log("🔄 Setting isLocationChanging to TRUE in LocationDropdown");
+        setIsLocationChanging(true); // Start loading animation
+        
+        // Add a small delay to ensure state propagation
+        setTimeout(() => {
+          console.log("📍 Calling onLocationChange with:", selectedOption.value);
+          onLocationChangeRef.current({
+            lat: selectedOption.value.lat,
+            lon: selectedOption.value.lon,
+          });
+        }, 100);
+
+      // Create new URL
+      const url = new URL(window.location.origin + pathname);
+      
+      if (selectedOption.isCustomAddress) {
+        url.searchParams.set('lat', selectedOption.value.lat.toString());
+        url.searchParams.set('lon', selectedOption.value.lon.toString());
+        url.searchParams.set('address', selectedOption.value.label);
+        url.searchParams.delete('location');
+      } else if (selectedOption.value.lat !== null && selectedOption.value.lon !== null) {
+        url.searchParams.set('lat', selectedOption.value.lat.toString());
+        url.searchParams.set('lon', selectedOption.value.lon.toString());
+        url.searchParams.set('location', selectedOption.value.label);
+        url.searchParams.delete('address');
+      }
+      
+      window.history.replaceState(
+        { 
+          lat: selectedOption.value.lat,
+          lon: selectedOption.value.lon,
+          type: selectedOption.isCustomAddress ? 'address' : 'location',
+          label: selectedOption.value.label
+        }, 
+        '', 
+        url.toString()
+      );
+    }
+  }
+};
+  
+  
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === 'Enter' && addressSuggestions.length > 0) {
       const firstSuggestion = addressSuggestions[0];
       setSelectedValue(firstSuggestion);
       localStorage.setItem('selectedLocation', JSON.stringify(firstSuggestion));
+      
+      const url = new URL(window.location.origin + pathname);
+      url.searchParams.set('lat', firstSuggestion.value.lat.toString());
+      url.searchParams.set('lon', firstSuggestion.value.lon.toString());
+      url.searchParams.set('address', firstSuggestion.value.label);
+      
+      window.history.replaceState({}, '', url.toString());
+  
       onLocationChangeRef.current({
         lat: firstSuggestion.value.lat,
         lon: firstSuggestion.value.lon
       });
-    }
-  };
-
-  const handleSelectChange = (selectedOption: any) => {
-    setSelectedValue(selectedOption);
-
-    if (selectedOption) {
-      localStorage.setItem('selectedLocation', JSON.stringify(selectedOption));
-      if (selectedOption.isCustomAddress) {
-        onLocationChangeRef.current({
-          lat: selectedOption.value.lat,
-          lon: selectedOption.value.lon
-        });
-      } else if (selectedOption.value.lat !== null && selectedOption.value.lon !== null) {
-        onLocationChangeRef.current({
-          lat: selectedOption.value.lat,
-          lon: selectedOption.value.lon
-        });
-      }
     }
   };
 
@@ -215,6 +312,10 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({ onLocationChange })
       border: '1px solid #ccc',
       boxShadow: 'none',
       '&:hover': { border: '1px solid #2684FF' }
+    }),
+    menuPortal: (base: any) => ({
+      ...base,
+      zIndex: 9999,
     }),
     singleValue: (provided: any) => ({
       ...provided,
@@ -252,8 +353,10 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({ onLocationChange })
       }
       className="location-dropdown"
       classNamePrefix="location-select"
+      menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+      menuPosition="fixed"
     />
   );
 };
 
-export default LocationDropdown;
+export default React.memo(LocationDropdown);

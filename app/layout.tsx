@@ -54,7 +54,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             backgroundColor: "#f1f1f1",
             fontSize: "0.9rem",
             width: "100%",
-            marginTop: "auto"
+            marginTop: "auto",
+            zIndex: "1100",
           }}
         >
           Made with ❤️ using Next.js and MTA API

@@ -3,13 +3,37 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { FaBars } from "react-icons/fa";
+import { usePathname } from "next/navigation"; // Import usePathname
+import HeaderSection from './headerSection';
 
 const TABLET_BREAKPOINT = 768;
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [windowWidth, setWindowWidth] = useState(0);
+  const [selectedStop, setSelectedStop] = useState<string | null>(null);
+  const [locationServicesEnabled, setLocationServicesEnabled] = useState<boolean>(false); // ✅ Added state
+  const pathname = usePathname();
+  const [isLocationChanging, setIsLocationChanging] = useState(false);
 
+
+  const handleLocationChange = async (newLocation: { lat: number | null; lon: number | null }) => {
+    if (newLocation.lat && newLocation.lon) {
+      console.log("🚀 handleLocationChange triggered in Header");
+      setIsLocationChanging(true); // Start loading animation
+      console.log("⏳ isLocationChanging set to TRUE in Header");
+      
+      // Add a small delay to ensure the loading state is set
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      try {
+        console.log("📌 Setting new location:", newLocation);
+        setSelectedStop(`${newLocation.lat}, ${newLocation.lon}`);
+      } catch (error) {
+        console.error('❌ Error during location change:', error);
+      }
+    }
+  };
   useEffect(() => {
     // Set initial window width after component mounts
     setWindowWidth(window.innerWidth);
@@ -24,6 +48,8 @@ export default function Header() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  
 
   // Add keyframe animations using useEffect
   useEffect(() => {
@@ -44,30 +70,33 @@ export default function Header() {
     };
   }, []);
 
+  const handleHomeClick = () => {
+    sessionStorage.setItem("visitedFromHeader", "true");
+  };
+
   return (
     <header
-  style={{
-    width: "100%",
-    backgroundColor: "#fff",
-    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-    position: "sticky",
-    top: 0,
-    zIndex: 2000,
-    minHeight: "80px",
-    overflowX: "hidden"
-  }}
->
-  <div style={{
-    maxWidth: "1200px",
-    margin: "0 auto",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    position: "relative",
-    height: "80px",
-  }}>
-
-        {/* Only render mobile menu button if window width is set and below breakpoint */}
+      style={{
+        width: "100%",
+        backgroundColor: "#fff",
+        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+        position: "sticky",
+        top: 0,
+        zIndex: 2000,
+        minHeight: "80px",
+        overflowX: "hidden"
+      }}
+    >
+      <div style={{
+        maxWidth: "1200px",
+        margin: "0 auto",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        position: "relative",
+        height: "80px",
+      }}>
+        {/* Mobile menu button */}
         {windowWidth > 0 && windowWidth <= TABLET_BREAKPOINT && (
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -80,6 +109,8 @@ export default function Header() {
               display: 'flex',
               alignItems: 'center',
               padding: '8px',
+              position: 'absolute',
+              left: '20px',
             }}
             aria-label="Toggle menu"
           >
@@ -87,28 +118,39 @@ export default function Header() {
           </button>
         )}
 
-        {/* Logo */}
-<Link 
-  href="/"
-  style={{
-    display: 'flex',
-    alignItems: 'center',
-    marginRight: 'auto', // This will push everything else to the right
-    zIndex: 2002,
-  }}
->
-  <img
-    src="/icons/logo.png"
-    alt="Logo"
-    style={{
-      height: "60px",
-      width: "auto",
-      objectFit: "contain",
-    }}
-  />
-</Link>
+        {/* Logo with conditional styling */}
+        <Link 
+          href="/"
+          onClick={handleHomeClick}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            zIndex: 2002,
+            ...(windowWidth <= TABLET_BREAKPOINT
+              ? {
+                  position: 'absolute',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  margin: '0',
+                }
+              : {
+                  marginRight: 'auto',
+                  marginLeft: '20px',
+                })
+          }}
+        >
+          <img
+            src="/icons/logo.png"
+            alt="Logo"
+            style={{
+              height: "60px",
+              width: "auto",
+              objectFit: "contain",
+            }}
+          />
+        </Link>
 
-        {/* Desktop Navigation - only render if window width is set and above breakpoint */}
+        {/* Desktop Navigation */}
         {windowWidth > 0 && windowWidth > TABLET_BREAKPOINT && (
           <nav style={{
             position: 'absolute',
@@ -119,10 +161,11 @@ export default function Header() {
           }}>
             <Link 
               href="/"
+              onClick={handleHomeClick}
               style={{
                 textDecoration: 'none',
                 color: 'inherit',
-                fontSize: '1.1rem',
+                fontSize: '1.3rem',
                 fontWeight: '500',
                 padding: '0.5rem 1rem',
               }}
@@ -130,11 +173,23 @@ export default function Header() {
               Home
             </Link>
             <Link 
+              href="/schedules"
+              style={{
+                textDecoration: 'none',
+                color: 'inherit',
+                fontSize: '1.3rem',
+                fontWeight: '500',
+                padding: '0.5rem 1rem',
+              }}
+            >
+              Schedules
+            </Link>
+            <Link 
               href="/about"
               style={{
                 textDecoration: 'none',
                 color: 'inherit',
-                fontSize: '1.1rem',
+                fontSize: '1.3rem',
                 fontWeight: '500',
                 padding: '0.5rem 1rem',
               }}
@@ -192,6 +247,19 @@ export default function Header() {
                 Home
               </Link>
               <Link 
+                href="/schedules"
+                onClick={() => setIsMenuOpen(false)}
+                style={{
+                  padding: '10px 0',
+                  borderBottom: '1px solid #eee',
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  fontSize: '1.1rem',
+                }}
+              >
+                Schedules
+              </Link>
+              <Link 
                 href="/about"
                 onClick={() => setIsMenuOpen(false)}
                 style={{
@@ -208,6 +276,19 @@ export default function Header() {
           </>
         )}
       </div>
+      {/* ✅ Show HeaderSection Only on Home Page */}
+      {pathname === '/' && (
+      <div style={{ borderTop: "1px solid #e0e0e0", }}>
+        <HeaderSection
+          selectedStop={selectedStop}
+          onLocationChange={handleLocationChange}
+          windowWidth={windowWidth}
+          isLocationChanging={isLocationChanging} // Ensure this is passed
+          setIsLocationChanging={setIsLocationChanging} // Ensure this is passed
+        />
+      </div>
+    )}
     </header>
+    
   );
 }
