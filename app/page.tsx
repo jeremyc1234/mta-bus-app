@@ -164,11 +164,10 @@ export default function Home() {
   }, []);
   const checkServiceAlert = async (routeId: string) => {
     try {
-      let cleanRouteId = routeId.replace('MTA NYCT_', '').replace('MTABC_', '');
-      const upperRouteId = cleanRouteId.toUpperCase();
-      let fullRouteId = /^(BM|QM|BXM|Q\d+|B\d+|S\d+)/.test(upperRouteId)
-        ? `MTABC_${cleanRouteId}`
-        : `MTA NYCT_${cleanRouteId}`;
+      const cleanRouteId = routeId.replace(/MTA NYCT_|MTABC_/g, '').toUpperCase();
+      const isExpressRoute = /^(BM|QM|BXM|Q\d+|B\d+|S\d+|X\d+)/.test(cleanRouteId);
+      const fullRouteId = isExpressRoute ? `MTABC_${cleanRouteId}` : `MTA NYCT_${cleanRouteId}`;
+
 
       const res = await fetch(`/api/servicealert?routeId=${encodeURIComponent(fullRouteId)}`);
 
@@ -317,14 +316,13 @@ export default function Home() {
   }
 
   const fetchServiceAlert = async (routeId: string) => {
-    let cleanRouteId = '';
+    const cleanRouteId = routeId.replace(/MTA NYCT_|MTABC_/g, '').toUpperCase();
 
     try {
-      cleanRouteId = routeId.replace('MTA NYCT_', '').replace('MTABC_', '');
-      const upperRouteId = cleanRouteId.toUpperCase();
-      let fullRouteId = /^(BM|QM|BXM|Q\d+|B\d+|S\d+)/.test(upperRouteId)
-        ? `MTABC_${cleanRouteId}`
-        : `MTA NYCT_${cleanRouteId}`;
+      const isExpressRoute = /^(BM|QM|BXM|Q\d+|B\d+|S\d+|X\d+)/.test(cleanRouteId);
+      const fullRouteId = isExpressRoute ? `MTABC_${cleanRouteId}` : `MTA NYCT_${cleanRouteId}`;
+
+
 
       const res = await fetch(`/api/servicealert?routeId=${encodeURIComponent(fullRouteId)}`);
 

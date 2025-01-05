@@ -141,34 +141,54 @@ const ServiceAlertPopup: React.FC<ServiceAlertPopupProps> = ({ alert, onClose })
           <strong>📝 Summary:</strong> {alert.summary}
         </p>
         
-        <p style={{ 
-          marginBottom: '15px',
-          whiteSpace: 'pre-line' // This enables the newlines to be rendered
-        }}>
-          <strong>📄 Description:</strong> {formatDescription(alert.description).split('\n').map((part, index) => {
-            if (part.includes("What's happening?")) {
-              const [emoji, ...rest] = part.split("What's happening?");
-              return (
-                <span key={index}>
-                  {emoji}<strong>What's happening?</strong>{rest}
-                </span>
-              );
-            } else if (part.includes("Note:")) {
-              const [emoji, ...rest] = part.split("Note:");
-              return (
-                <span key={index}>
-                  {emoji}<strong>Note:</strong>{rest}
-                </span>
-              );
-            }
-            return <span key={index}>{part}</span>;
-          }).map((element, i) => (
-            <React.Fragment key={i}>
-              {element}
-              {i !== formatDescription(alert.description).split('\n').length - 1 && <br />}
-            </React.Fragment>
-          ))}
-        </p>
+        {alert.description && alert.description.trim() && (() => {
+  const descriptionStart = alert.description.match(/What's happening\?/i);
+
+  // Check if there's meaningful text before "What's happening?"
+  const hasPrecedingText = descriptionStart 
+    ? alert.description.substring(0, descriptionStart.index).trim().length > 0
+    : true;
+
+  const formattedDescription = formatDescription(alert.description).split('\n').map((part, index) => {
+    if (part.includes("What's happening?")) {
+      const [emoji, ...rest] = part.split("What's happening?");
+      return (
+        <span key={index}>
+          {emoji}<strong>What's happening?</strong>{rest}
+        </span>
+      );
+    } else if (part.includes("Note:")) {
+      const [emoji, ...rest] = part.split("Note:");
+      return (
+        <span key={index}>
+          {emoji}<strong>Note:</strong>{rest}
+        </span>
+      );
+    }
+    return <span key={index}>{part}</span>;
+  });
+
+  // Render Description only if there's meaningful preceding text
+  return hasPrecedingText ? (
+    <p style={{ marginBottom: '15px', whiteSpace: 'pre-line' }}>
+      <strong>📄 Description:</strong> {formattedDescription.map((element, i) => (
+        <React.Fragment key={i}>
+          {element}
+          {i !== formattedDescription.length - 1 && <br />}
+        </React.Fragment>
+      ))}
+    </p>
+  ) : (
+    <p style={{ marginBottom: '15px', whiteSpace: 'pre-line' }}>
+      {formattedDescription.map((element, i) => (
+        <React.Fragment key={i}>
+          {element}
+          {i !== formattedDescription.length - 1 && <br />}
+        </React.Fragment>
+      ))}
+    </p>
+  );
+})()}
 
         {alert.notice && (
           <p style={{ 
