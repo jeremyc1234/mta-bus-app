@@ -126,8 +126,8 @@ const BUS_STOP_LOCATIONS = [
     // Add timestamp
     url.searchParams.set('timestamp', Date.now().toString());
   
-    // Update URL without page reload
-    window.history.replaceState(
+    // Update URL with page reload and add to browser history
+    window.history.pushState(
       { 
         lat: newLocation.value.lat,
         lon: newLocation.value.lon,
@@ -288,7 +288,7 @@ const BUS_STOP_LOCATIONS = [
   };
 
   const handleSelectChange = (selectedOption: any) => {
-    setSelectedValue(selectedOption);
+    if (!selectedOption) return;
     
     if (selectedOption?.value?.lat && selectedOption?.value?.lon) {
       setIsLocationChanging(true);

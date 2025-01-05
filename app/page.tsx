@@ -304,18 +304,29 @@ export default function Home() {
 
 useEffect(() => {
   const handlePopState = (event: PopStateEvent) => {
-    const url = new URL(window.location.href);
     const state = event.state;
-
-    // First try to get location from URL parameters
+    const url = new URL(window.location.href);
+    
+    // Get parameters from URL
     const lat = url.searchParams.get('lat');
     const lon = url.searchParams.get('lon');
     const locationParam = url.searchParams.get('location');
     const addressParam = url.searchParams.get('address');
 
+    // Handle history state if available
+    if (state && state.lat && state.lon) {
+      setLocation({
+        lat: state.lat,
+        lon: state.lon
+      });
+      setSelectedStop(state.label || null);
+      return;
+    }
+
+    // Fallback to URL parameters if no state
     if (locationParam) {
       const predefinedLocation = BUS_STOP_LOCATIONS.find(
-        (loc) => loc.label === decodeURIComponent(locationParam)
+        loc => loc.label === decodeURIComponent(locationParam)
       );
 
       if (predefinedLocation && predefinedLocation.lat && predefinedLocation.lon) {
@@ -326,10 +337,12 @@ useEffect(() => {
         setSelectedStop(locationParam);
         return;
       }
-    } else if (lat && lon) {
+    }
+
+    if (lat && lon) {
       setLocation({
         lat: parseFloat(lat),
-        lon: parseFloat(lon),
+        lon: parseFloat(lon)
       });
       if (addressParam) {
         setSelectedStop(addressParam);
@@ -337,41 +350,14 @@ useEffect(() => {
       return;
     }
 
-    // If no URL params and no state, fall back to Union Square
-    if (!state) {
-      const defaultLocation = BUS_STOP_LOCATIONS[0];
-      if (defaultLocation.lat !== null && defaultLocation.lon !== null) {
-        setLocation({
-          lat: defaultLocation.lat,
-          lon: defaultLocation.lon,
-        });
-        setSelectedStop(defaultLocation.label);
-        // Update URL with default location
-        url.searchParams.set('location', defaultLocation.label);
-        url.searchParams.set('lat', defaultLocation.lat.toString());
-        url.searchParams.set('lon', defaultLocation.lon.toString());
-        window.history.replaceState(
-          { 
-            lat: defaultLocation.lat,
-            lon: defaultLocation.lon,
-            type: 'location',
-            label: defaultLocation.label
-          },
-          '',
-          url.toString()
-        );
-      }
-    } else {
-      // Use state if available
+    // If no valid location found, use default (Union Square)
+    const defaultLocation = BUS_STOP_LOCATIONS[0];
+    if (defaultLocation.lat !== null && defaultLocation.lon !== null) {
       setLocation({
-        lat: state.lat,
-        lon: state.lon
+        lat: defaultLocation.lat,
+        lon: defaultLocation.lon,
       });
-      if (state.type === 'location') {
-        setSelectedStop(state.label);
-      } else {
-        setSelectedStop(null);
-      }
+      setSelectedStop(defaultLocation.label);
     }
   };
 
