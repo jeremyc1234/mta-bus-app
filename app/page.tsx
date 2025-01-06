@@ -159,6 +159,7 @@ const HomeContent = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const [timestamp, setTimestamp] = useState(() => String(Date.now()));
+  const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
   
   useEffect(() => {
     if (!searchParams.has('timestamp')) {
@@ -1625,7 +1626,21 @@ useEffect(() => {
                                 position: "relative",
                               }}
                             >
-                              <div style={{ marginBottom: 8 }}>
+                              <div 
+                                  style={{ 
+                                    marginBottom: 8,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px'
+                                  }}
+                                  onClick={() => {
+                                    console.log('🚌 Route clicked:', routeName); // Add this log
+                                    setSelectedRoute(routeName);
+                                    console.log('🚌 Selected route state updated to:', routeName); // Add this log
+                                  }}
+                                >
                                 {routeName}
                                 {routesWithAlerts[routeName] && (
                                   <span
