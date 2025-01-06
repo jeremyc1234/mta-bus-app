@@ -38,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
          }}
        />
      </head>
-     <body className={inter.className}>
+     <body className={inter.className} style={{ overflowX: 'hidden' }}>
        <noscript>
          <iframe
            src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}
@@ -50,28 +50,35 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
        <Header />
        <main
-         style={{
-           flex: 1,
-           position: 'relative',
-           width: '100%',
-           overflowX: 'hidden',
-         }}
-       >
+  style={{
+    flex: 1,
+    position: 'relative',
+    width: '100%',
+    minHeight: 'auto', // Remove static minHeight
+    overflowY: 'auto',
+    overflowX: 'hidden',
+    touchAction: 'pan-y',
+    boxSizing: 'border-box',
+  }}
+>
          {children}
        </main>
        <footer
-         style={{
-           textAlign: 'center',
-           padding: '20px',
-           backgroundColor: '#f1f1f1',
-           fontSize: '0.9rem',
-           width: '100%',
-           marginTop: 'auto',
-           zIndex: '1100',
-         }}
-       >
-         Made with ❤️ using Next.js and MTA API
-       </footer>
+  style={{
+    textAlign: 'center',
+    padding: '20px',
+    backgroundColor: '#f1f1f1',
+    fontSize: '0.9rem',
+    width: '100%',
+    maxWidth: '100vw',
+    boxSizing: 'border-box',
+    marginTop: 'auto',
+    zIndex: '1100',
+    overflowX: 'hidden'
+  }}
+>
+  Made with ❤️ using Next.js and MTA API
+</footer>
      </body>
    </html>
  );

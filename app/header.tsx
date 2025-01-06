@@ -121,7 +121,7 @@ export default function Header() {
               border: "none",
               fontSize: "1.5rem",
               cursor: "pointer",
-              zIndex: 2001,
+              zIndex: 2004,
               display: 'flex',
               alignItems: 'center',
               padding: '8px',
@@ -137,14 +137,11 @@ export default function Header() {
         {/* Logo with conditional styling */}
         <Link 
           href={preserveUrlParams('/')}
-          onClick={() => {
-            handleHomeClick();
-            // Don't prevent default - let the preserveUrlParams work
-          }}
+          onClick={handleHomeClick}
           style={{
             display: 'flex',
             alignItems: 'center',
-            zIndex: 2002,
+            zIndex: 1999,
             ...(windowWidth <= TABLET_BREAKPOINT
               ? {
                   position: 'absolute',
@@ -181,7 +178,10 @@ export default function Header() {
           }}>
             <Link 
               href={pathname === '/' ? '/' : preserveUrlParams('/')}
-              onClick={handleHomeClick}
+              onClick={() => {
+                setIsMenuOpen(false);
+                sessionStorage.setItem('visitedFromHamburger', 'true');
+              }}
               style={{
                 textDecoration: 'none',
                 color: 'inherit',
@@ -261,13 +261,16 @@ export default function Header() {
   display: 'flex',
   flexDirection: 'column',
   gap: '15px',
-  zIndex: 1999,
+  zIndex: 2001,
   transform: isMenuOpen ? 'translateX(0)' : 'translateX(-100%)',
   transition: 'transform 0.3s ease-in-out',
 }}>
   <Link 
   href={pathname === '/' ? '/' : preserveUrlParams('/')}
-  onClick={() => setIsMenuOpen(false)}
+  onClick={() => {
+    setIsMenuOpen(false);
+    sessionStorage.setItem('visitedFromHamburger', 'true');
+  }}
   style={{
     padding: '10px 0',
     borderBottom: '1px solid #eee',

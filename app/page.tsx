@@ -298,7 +298,7 @@ const HomeContent = () => {
           } else {
             setLocationServicesEnabled(true);  // They have location services, just outside NYC
             setIsOutsideNYC(true);
-            setIsBannerVisible(true);
+            // setIsBannerVisible(true);
             // Set Union Square as default with proper URL parameters
             const defaultLocation = BUS_STOP_LOCATIONS[0]; // Union Square
             if (defaultLocation.lat !== null && defaultLocation.lon !== null) {
@@ -847,28 +847,14 @@ useEffect(() => {
   BusRoutePopup.displayName = 'BusRoutePopup';
 
   useEffect(() => {
-    if (sessionStorage.getItem("visitedFromHeader")) {
+    const visitedFromHeader = sessionStorage.getItem('visitedFromHeader');
+    const visitedFromHamburger = sessionStorage.getItem('visitedFromHamburger');
+    if (visitedFromHeader === 'true' || visitedFromHamburger === 'true') {
       setIsBannerVisible(false);
-      sessionStorage.removeItem("visitedFromHeader");
+      sessionStorage.removeItem('visitedFromHeader');
+      sessionStorage.removeItem('visitedFromHamburger');
     }
   }, []);
-
-  useEffect(() => {
-    const visitedFromAbout = sessionStorage.getItem("visitedFromAbout");
-    const visitedFromSchedules = sessionStorage.getItem("visitedFromSchedules");
-
-    if (visitedFromAbout || visitedFromSchedules) {
-      setIsBannerVisible(false);
-      sessionStorage.removeItem("visitedFromAbout");
-      sessionStorage.removeItem("visitedFromSchedules");
-    } else if (isBannerVisible) {
-      const timer = setTimeout(() => {
-        setIsBannerVisible(false);
-      }, 15000);
-      return () => clearTimeout(timer);
-    }
-  }, [isBannerVisible]);
-
 
   useEffect(() => {
     if (isBannerVisible) {
@@ -1199,16 +1185,19 @@ useEffect(() => {
             position: "relative",
           }}>
             <div style={{
-              padding: 20,
-              textAlign: "center",
-              maxWidth: "100vw",
-              minHeight: "calc(100vh - 60px)", // Reduce white space
-              overflowY: "auto",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "flex-start", // Align content to the top
-              gap: "8px",
-            }} className={inter.className}>
+  padding: "20px 0",
+  textAlign: "center", 
+  width: "100%",
+  maxWidth: "100vw",
+  minHeight: isMobile ? "auto" : "100vh",
+  height: isMobile ? "auto" : "100vh",
+  overflowY: "auto",
+  overflowX: "hidden",
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "flex-start",
+  gap: "8px",
+}}>
               {isBannerVisible && windowWidth !== null && (
                 <div
                   style={{
@@ -1331,17 +1320,16 @@ useEffect(() => {
   ref={scrollContainerRef}
   style={{
     display: "flex",
-    overflowX: "auto",
+    overflowX: "auto", 
     overflowY: "hidden",
     gap: "16px",
     touchAction: "pan-x",
     WebkitOverflowScrolling: "touch",
-    scrollSnapType: isMobile ? "x mandatory" : "none",
+    scrollSnapType: "x mandatory",
     margin: "0 -20px",
-    padding: "0 10px",
-    height: "calc(100vh - 100px)",
+    padding: "0 30px",
+    height: isMobile ? "calc(100vh - 100px)" : "calc(100vh - 100px)",
     boxSizing: "border-box",
-    marginBottom: "20px",
     position: "relative",
   }}
 >
@@ -1371,25 +1359,26 @@ useEffect(() => {
 
                   return (
                     <div
-                      key={stop.stopId}
-                      style={{
-                        scrollSnapAlign: isMobile ? "center" : "none",
-                        width: isMobile ? "calc(100vw - 40px)" : "360px",
-                        minWidth: isMobile ? "calc(100vw - 40px)" : "360px",
-                        maxWidth: "360px",
-                        height: "100%",
-                        backgroundColor: "#D3D3D3",
-                        borderRadius: "8px",
-                        padding: "8px",
-                        boxSizing: "border-box",
-                        overflowY: "auto",
-                        marginBottom: "20px",
-                        color: "black",
-                        flexShrink: 0,
-                        display: "flex",
-                        flexDirection: "column"
-                      }}
-                    >
+  key={stop.stopId}
+  style={{
+    scrollSnapAlign: isMobile ? "center" : "none",
+    width: isMobile ? "calc(100vw - 40px)" : "360px",
+    minWidth: isMobile ? "calc(100vw - 40px)" : "360px",
+    maxWidth: "360px",
+    height: "100%",
+    backgroundColor: "#D3D3D3",
+    borderRadius: "8px",
+    padding: "8px",
+    boxSizing: "border-box",
+    overflowY: "auto",
+    marginBottom: "20px",
+    color: "black",
+    flexShrink: 0,
+    display: "flex",
+    flexDirection: "column",
+    overscrollBehavior: "auto"  // Add this line
+  }}
+>
                       <h2 style={{ fontSize: "1.3rem", fontWeight: "bold" }}>
                         <span style={{ fontSize: "1.8rem" }}>🚏</span>
                         {stop.stopName}{" "}
