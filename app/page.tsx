@@ -237,7 +237,7 @@ const HomeContent = () => {
     if (location.lat && location.lon) {
       fetchBusData(location.lat, location.lon);
     }
-  }, [location.lat, location.lon]);
+  }, [location]);
 
   useEffect(() => {
     const locationLabel = searchParams.get('location');
@@ -605,30 +605,38 @@ useEffect(() => {
     highlightedStopRef.current = highlightedStop;
 
     // Create a stable scroll handler that uses the ref
-    const handleScroll = useRef((event: Event) => {
+    const handleScroll = useCallback((event: Event) => {
       const scrollEl = event.target as HTMLDivElement;
       if (!scrollEl) return;
-
+    
       const scrollTop = scrollEl.scrollTop;
       let closestStop = null;
       let minDistance = Infinity;
-
+    
       const children = Array.from(scrollEl.children);
       for (const child of children) {
         const stopElement = child as HTMLElement;
         const offsetTop = stopElement.offsetTop - scrollEl.offsetTop;
         const distance = Math.abs(scrollTop - offsetTop);
-
+    
         if (distance < minDistance) {
           minDistance = distance;
           closestStop = stopElement.getAttribute('data-stop');
         }
       }
-
+    
       if (closestStop && closestStop !== highlightedStopRef.current) {
         setHighlightedStop(closestStop);
       }
-    }).current;
+    }, [highlightedStopRef]);
+    
+    useEffect(() => {
+      const scrollEl = scrollableRef.current;
+      if (scrollEl) {
+        scrollEl.addEventListener('scroll', handleScroll);
+        return () => scrollEl.removeEventListener('scroll', handleScroll);
+      }
+    }, [handleScroll]);
     
     const checkScrollableRight = () => {
       const el = scrollableRef.current;
@@ -1659,6 +1667,7 @@ useEffect(() => {
     </Suspense>
   );
 }
+HomeContent.displayName = 'HomeContent';
 
 const Home = () => {
   return (
