@@ -1452,73 +1452,94 @@ useEffect(() => {
                   </div>
                 )}
                 
-                {finalStops.map((stop: any) => {
-                  const arrivalsArray = data.arrivals?.[stop.stopId] || [];
-                  const hasBuses = arrivalsArray.length > 0;
-                  const routeMap = getStopArrivals(stop.stopId);
-                  const hasMultipleRoutes = Object.keys(routeMap).length > 1;
+                {finalStops.map((stop: any, index: number) => {
+  const isFirstTile = index === 0;
 
-                  return (
-                    <div
-                    key={stop.stopId}
-                    data-bus-tile="true"
-                    onScroll={(e) => {
-                      const tile = e.currentTarget as HTMLDivElement;
-                      const isScrollableBottom = tile.scrollTop + tile.clientHeight < tile.scrollHeight;
-                      const isScrollableTop = tile.scrollTop > 0;
-                    
-                      tile.style.boxShadow = `
-                        ${isScrollableTop ? 'inset 0 12px 15px -6px rgba(0,0,0,0.3)' : ''}
-                        ${isScrollableBottom ? 'inset 0 -12px 15px -6px rgba(0,0,0,0.3)' : ''}
-                      `;
-                    }}
-  style={{
-    scrollSnapAlign: isMobile ? "center" : "none",
-    width: isMobile ? "calc(100vw - 40px)" : "360px",
-    minWidth: isMobile ? "calc(100vw - 40px)" : "360px",
-    maxWidth: "360px",
-    height: isMobile ? "50vh" : "100%", // Changed from 100%
-    backgroundColor: "#D3D3D3",
-    borderRadius: "8px",
-    padding: "8px",
-    boxSizing: "border-box",
-    overflowY: "auto",
-    marginBottom: "20px",
-    color: "black",
-    flexShrink: 0,
-    display: "flex",
-    flexDirection: "column",
-    position: "relative",
-    overscrollBehavior: "contain",
-    scrollbarWidth: "thin",
-    scrollbarColor: "rgba(155, 155, 155, 0.7) transparent"
-  }}
->
-<style jsx>{`
-    [data-bus-tile]::after {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 50px;
-      background: linear-gradient(to bottom, var(--scroll-shadow-top, transparent), transparent);
-      pointer-events: none;
-      z-index: 2;
-    }
+  const arrivalsArray = data.arrivals?.[stop.stopId] || [];
+  const hasBuses = arrivalsArray.length > 0;
+  const routeMap = getStopArrivals(stop.stopId);
+  const hasMultipleRoutes = Object.keys(routeMap).length > 1;
 
-    [data-bus-tile]::before {
-      content: "";
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 50px;
-      background: linear-gradient(to top, var(--scroll-shadow-bottom, transparent), transparent);
-      pointer-events: none;
-      z-index: 2;
-    }
-  `}</style>
+  return (
+    <div
+      key={stop.stopId}
+      data-bus-tile="true"
+      style={{
+        scrollSnapAlign: isMobile ? "center" : "none",
+        width: isMobile ? "calc(100vw - 40px)" : "360px",
+        minWidth: isMobile ? "calc(100vw - 40px)" : "360px",
+        maxWidth: "360px",
+        height: isMobile ? "50vh" : "100%",
+        backgroundColor: "#D3D3D3",
+        borderRadius: "8px",
+        padding: "8px",
+        boxSizing: "border-box",
+        overflowY: "auto",
+        marginBottom: "20px",
+        color: "black",
+        flexShrink: 0,
+        display: "flex",
+        flexDirection: "column",
+        position: "relative",
+        overscrollBehavior: "contain",
+        scrollbarWidth: "thin",
+        scrollbarColor: "rgba(155, 155, 155, 0.7) transparent"
+      }}
+    >
+      {/* 🚀 ARROW BUTTONS ABOVE STOP NAME */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: '8px' 
+      }}>
+        {/* LEFT ARROW (Hidden on First Tile) */}
+        {index > 0 && (
+          <button
+            onClick={() => {
+              if (scrollContainerRef.current) {
+                const tileWidth = scrollContainerRef.current.querySelector('[data-bus-tile]')?.clientWidth || 360;
+                scrollContainerRef.current.scrollBy({ left: -tileWidth - 15, behavior: 'smooth' });
+              }
+            }}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '20px',
+              zIndex: 100,
+            }}
+          >
+            👈
+          </button>
+        )}
+
+        {/* RIGHT ARROW (Hidden on Last Tile) */}
+        {index < finalStops.length - 1 && (
+          <button
+            onClick={() => {
+              if (scrollContainerRef.current) {
+                const tileWidth = scrollContainerRef.current.querySelector('[data-bus-tile]')?.clientWidth || 360;
+                scrollContainerRef.current.scrollBy({ left: tileWidth + 15, behavior: 'smooth' });
+              }
+            }}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '20px',
+              zIndex: 100,
+              position: 'absolute',
+              top: '8px',
+              right: '8px',
+            }}
+          >
+            👉
+          </button>
+        )}
+      </div>
+
+
                       <h2 style={{ fontSize: "1.3rem", fontWeight: "bold" }}>
                         <span style={{ fontSize: "1.8rem" }}>🚏</span>
                         {stop.stopName}{" "}
