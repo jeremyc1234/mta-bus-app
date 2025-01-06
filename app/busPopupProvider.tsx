@@ -435,7 +435,7 @@ useEffect(() => {
     style={{
       position: 'absolute',
       ...(stopPosition === 'above'
-        ? { top: '80px' } // Start below the header
+        ? { top: '120px' } // Start below the header
         : { bottom: 0 }),
       left: 0,
       right: 0,
@@ -460,7 +460,7 @@ useEffect(() => {
         color: '#FFF',
         fontWeight: 'bold',
         fontSize: '1rem',
-        margin: stopPosition === 'above' ? '10px 0 8px' : '8px 0 10px',
+        margin: stopPosition === 'above' ? '20px 0 8px' : '8px 0 10px',
         zIndex: 11,
         pointerEvents: 'none',
         opacity: stopPosition === 'visible' ? 0 : 1, // Fade in/out

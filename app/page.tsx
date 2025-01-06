@@ -103,7 +103,7 @@ interface ServiceAlert {
   mapLink?: string;
 }
 
-export default function Home() {
+const HomeContent = () => {
   // Union Square fallback lat/lon
   const FALLBACK_LAT = 40.7359;
   const FALLBACK_LON = -73.9906;
@@ -1659,3 +1659,13 @@ useEffect(() => {
     </Suspense>
   );
 }
+
+const Home = () => {
+  return (
+    <Suspense fallback={<div>Loading Home...</div>}>
+      <HomeContent />
+    </Suspense>
+  );
+};
+
+export default Home;
