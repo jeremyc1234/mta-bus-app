@@ -1,5 +1,4 @@
-// headerSection.tsx
-import React, { useState, useEffect, useCallback, Suspense } from "react";
+import React, { useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";
 
 const LocationDropdown = dynamic(() => import("./locationDropdown"), {
@@ -21,61 +20,18 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
     isLocationChanging,
     setIsLocationChanging
 }) => {
-    const [isCollapsed, setIsCollapsed] = useState(false);
-    const throttleTimeout = React.useRef<NodeJS.Timeout | null>(null);
-    const [lastStateChange, setLastStateChange] = useState(Date.now());
-    const MIN_STATE_DURATION = 500; // milliseconds
-
-    // Effect to handle window width changes
     useEffect(() => {
-        // Automatically uncollapse header on desktop
+        // Ensure header remains visible on desktop and mobile
         if (windowWidth >= 768) {
-            setIsCollapsed(false);
+            document.body.style.paddingTop = "0px";
         }
     }, [windowWidth]);
 
-    const handleScroll = useCallback(() => {
-        // Only apply collapse behavior for screens smaller than desktop
-        if (windowWidth >= 768) {
-            setIsCollapsed(false);
-            return;
-        }
-
-        const currentScrollY = window.scrollY;
-        const now = Date.now();
-
-        if (now - lastStateChange < MIN_STATE_DURATION) return;
-
-        if (throttleTimeout.current) {
-            clearTimeout(throttleTimeout.current);
-        }
-
-        throttleTimeout.current = setTimeout(() => {
-            // Check if user is at the top of the page
-            const shouldBeCollapsed = currentScrollY > 0;
-            
-            if (shouldBeCollapsed !== isCollapsed) {
-                setIsCollapsed(shouldBeCollapsed);
-                setLastStateChange(now);
-            }
-        }, 200);
-    }, [windowWidth, isCollapsed, lastStateChange]);
-
-    useEffect(() => {
-        window.addEventListener('scroll', handleScroll, { passive: true });
-        return () => {
-            window.removeEventListener('scroll', handleScroll);
-            if (throttleTimeout.current) {
-                clearTimeout(throttleTimeout.current);
-            }
-        };
-    }, [handleScroll]);
-
     return (
         <div style={{
-            minHeight: isCollapsed ? '0' : '60px',
-            maxHeight: isCollapsed ? '0' : '200px',
-            padding: isCollapsed ? '0' : '8px 0',
+            minHeight: '60px',
+            maxHeight: '200px',
+            padding: '8px 0',
             position: 'relative',
             zIndex: 1100,
             display: 'flex',
@@ -83,9 +39,8 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
             alignItems: 'center',
             justifyContent: 'center',
             transition: 'all 0.3s ease',
-            overflow: 'hidden',
+            overflow: 'visible',
             borderTop: "1px solid #e0e0e0",
-            transform: `translateY(${isCollapsed ? '-1px' : '0'})`,
         }}>
             <div style={{
                 display: 'flex',
@@ -94,10 +49,9 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
                 alignItems: 'center',
                 gap: '8px',
                 width: '100%',
-                opacity: isCollapsed ? 0 : 1,
-                transform: `translateY(${isCollapsed ? '-20px' : '0'})`,
+                opacity: 1,
+                transform: 'translateY(0)',
                 transition: 'all 0.3s ease',
-                pointerEvents: isCollapsed ? 'none' : 'auto',
             }}>
                 <span style={{
                     fontSize: '1.2rem',
@@ -111,12 +65,12 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
                     Bus routes near
                 </span>
                 <Suspense fallback={<div>Loading Location Dropdown...</div>}>
-                <LocationDropdown
-                    selectedStop={selectedStop}
-                    onLocationChange={onLocationChange}
-                    isLocationChanging={isLocationChanging}
-                    setIsLocationChanging={setIsLocationChanging}
-                />
+                    <LocationDropdown
+                        selectedStop={selectedStop}
+                        onLocationChange={onLocationChange}
+                        isLocationChanging={isLocationChanging}
+                        setIsLocationChanging={setIsLocationChanging}
+                    />
                 </Suspense>
             </div>
         </div>

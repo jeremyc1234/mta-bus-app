@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState, Suspense, useEffect, useMemo, useCallback, memo } from "react";
+import React, { useRef, useState, Suspense, useEffect, useMemo, useCallback, memo, useLayoutEffect } from "react";
 import { BusPopupProvider, BusContent } from './busPopupProvider';
 import { Inter } from 'next/font/google';
 import Image from 'next/image';
@@ -160,13 +160,6 @@ const HomeContent = () => {
 
   const [timestamp, setTimestamp] = useState(() => String(Date.now()));
   
-  const normalizeStopName = (name: string) => {
-    return name
-      .toUpperCase()         // Ensure uniform casing
-      .replace(/\s*\/\s*/g, ' / ') // Standardize spacing around slashes
-      .replace(/\s+/g, ' ')  // Collapse multiple spaces into one
-      .trim();              // Remove leading/trailing spaces
-  };
   useEffect(() => {
     if (!searchParams.has('timestamp')) {
       const newParams = new URLSearchParams(searchParams.toString());
@@ -177,32 +170,54 @@ const HomeContent = () => {
 
   const checkScrollable = () => {
     const el = scrollContainerRef.current;
+    console.log('🛠️ checkScrollable Triggered');
     if (el) {
-      const canScrollLeft = el.scrollLeft > 0;
-      const canScrollRight = el.scrollWidth > el.clientWidth + el.scrollLeft;
-  
-      console.log("🛠️ Scroll Check:", {
-        canScrollLeft,
-        canScrollRight,
+      console.log('🛠️ Scroll Container Found:', {
         scrollLeft: el.scrollLeft,
         scrollWidth: el.scrollWidth,
         clientWidth: el.clientWidth,
       });
   
+      const canScrollLeft = el.scrollLeft > 0;
+      const canScrollRight = el.scrollWidth > el.clientWidth + el.scrollLeft;
+  
+      console.log('🛠️ Scroll State:', { canScrollLeft, canScrollRight });
+  
       setIsScrollableLeft(canScrollLeft);
       setIsScrollableRight(canScrollRight);
+    } else {
+      console.warn('⚠️ scrollContainerRef is null in checkScrollable');
     }
   };
-  
+
   useEffect(() => {
-    checkScrollable();
-    const el = scrollContainerRef.current;
-    if (el) {
-      el.addEventListener('scroll', checkScrollable);
-      window.addEventListener('resize', checkScrollable);
-    }
+    console.log('🛠️ Manual Scroll Check Trigger');
+    setTimeout(() => {
+      checkScrollable();
+    }, 1000); // Delay by 1s to ensure DOM is ready
+  }, []);
+  
+  useLayoutEffect(() => {
+    console.log('🛠️ useLayoutEffect Mounted: Adding Scroll Listeners');
+  
+    const setupScrollListener = () => {
+      const el = scrollContainerRef.current;
+      if (el) {
+        console.log('✅ Scroll Container Ready');
+        el.addEventListener('scroll', checkScrollable);
+        window.addEventListener('resize', checkScrollable);
+        checkScrollable(); // Ensure initial state is checked
+      } else {
+        console.warn('⚠️ scrollContainerRef is still null in useLayoutEffect');
+      }
+    };
+  
+    setupScrollListener();
+  
     return () => {
-      if (el) el.removeEventListener('scroll', checkScrollable);
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.removeEventListener('scroll', checkScrollable);
+      }
       window.removeEventListener('resize', checkScrollable);
     };
   }, []);
@@ -969,6 +984,33 @@ useEffect(() => {
   }, [isMobile]);
 
   useEffect(() => {
+    if (isMobile) {
+      const handleTileScroll = (e: Event) => {
+        const tile = e.target as HTMLElement;
+        const isAtTop = tile.scrollTop === 0;
+        const isAtBottom = Math.abs(tile.scrollHeight - tile.scrollTop - tile.clientHeight) < 1;
+        
+        if (isAtBottom) {
+          window.scrollBy({ top: 50, behavior: 'smooth' });
+        } else if (isAtTop && window.scrollY > 0) {
+          window.scrollBy({ top: -50, behavior: 'smooth' });
+        }
+      };
+  
+      const tiles = document.querySelectorAll('[data-bus-tile]');
+      tiles.forEach(tile => {
+        tile.addEventListener('scroll', handleTileScroll);
+      });
+  
+      return () => {
+        tiles.forEach(tile => {
+          tile.removeEventListener('scroll', handleTileScroll);
+        });
+      };
+    }
+  }, [isMobile]);
+
+  useEffect(() => {
     const getSuggestions = async () => {
       if (tempAddress.length > 3) {
         if (/\d/.test(tempAddress)) {
@@ -1165,6 +1207,7 @@ useEffect(() => {
         <p>Loading bus data...</p>
       </div>
     }>
+      
     <BusPopupProvider>
       {isAlertPopupOpen && serviceAlert && (
         <ServiceAlertPopup
@@ -1178,9 +1221,9 @@ useEffect(() => {
       <BusContent>
         {(showBusInfo) => (
           <div style={{
-            display: "flex",
-            flexDirection: "column",
-            minHeight: "100vh",
+            display: "flex", 
+            flexDirection: "column", 
+            minHeight: isMobile ? "50vh" : "100vh", // Changed from 100vh
             overflowY: "auto",
             position: "relative",
           }}>
@@ -1189,8 +1232,8 @@ useEffect(() => {
   textAlign: "center", 
   width: "100%",
   maxWidth: "100vw",
-  minHeight: isMobile ? "auto" : "100vh",
-  height: isMobile ? "auto" : "100vh",
+  minHeight: isMobile ? "60vh" : "auto", // Reduced from auto
+  height: isMobile ? "60vh" : "100vh",
   overflowY: "auto",
   overflowX: "hidden",
   display: "flex",
@@ -1316,11 +1359,61 @@ useEffect(() => {
                 </div>
               )}
 
+<div style={{ position: 'relative' }}>
+{isMobile && (
+  <>
+    {isScrollableLeft && (
+      <Image
+        src="/public/icons/left_caret.png"
+        alt="Scroll Left"
+        style={{
+          position: 'absolute',
+          top: '50%',
+          left: '10px',
+          transform: 'translateY(-50%)',
+          zIndex: 100,
+          cursor: 'pointer',
+          width: '24px',
+          height: '24px',
+          filter: 'drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.5))'
+        }}
+        onClick={() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollBy({ left: -200, behavior: 'smooth' });
+          }
+        }}
+      />
+    )}
+    {isScrollableRight && (
+      <Image
+        src="/public/icons/right_caret.png"
+        alt="Scroll Right"
+        style={{
+          position: 'absolute',
+          top: '50%',
+          right: '10px',
+          transform: 'translateY(-50%)',
+          zIndex: 100,
+          cursor: 'pointer',
+          width: '24px',
+          height: '24px',
+          filter: 'drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.5))'
+        }}
+        onClick={() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+          }
+        }}
+      />
+    )}
+  </>
+)}
+
 <div
   ref={scrollContainerRef}
   style={{
     display: "flex",
-    overflowX: "auto", 
+    overflowX: "auto",
     overflowY: "hidden",
     gap: "16px",
     touchAction: "pan-x",
@@ -1328,11 +1421,19 @@ useEffect(() => {
     scrollSnapType: "x mandatory",
     margin: "0 -20px",
     padding: "0 30px",
-    height: isMobile ? "calc(100vh - 100px)" : "calc(100vh - 100px)",
+    height: isMobile ? "50vh" : "calc(100vh - 100px)",
     boxSizing: "border-box",
     position: "relative",
+    overscrollBehavior: "auto",
+    scrollbarWidth: "none",
+    msOverflowStyle: "none",
+    boxShadow: `
+      ${isScrollableLeft ? 'inset 15px 0 20px -5px rgba(0,0,0,0.4)' : ''}
+      ${isScrollableRight ? 'inset -15px 0 20px -5px rgba(0,0,0,0.4)' : ''}
+    `,
   }}
 >
+  
                 {windowWidth !== null && data && finalStops.length === 0 && (
                   <div style={{
                     position: 'absolute',
@@ -1359,13 +1460,24 @@ useEffect(() => {
 
                   return (
                     <div
-  key={stop.stopId}
+                    key={stop.stopId}
+                    data-bus-tile="true"
+                    onScroll={(e) => {
+                      const tile = e.currentTarget as HTMLDivElement;
+                      const isScrollableBottom = tile.scrollTop + tile.clientHeight < tile.scrollHeight;
+                      const isScrollableTop = tile.scrollTop > 0;
+                    
+                      tile.style.boxShadow = `
+                        ${isScrollableTop ? 'inset 0 12px 15px -6px rgba(0,0,0,0.3)' : ''}
+                        ${isScrollableBottom ? 'inset 0 -12px 15px -6px rgba(0,0,0,0.3)' : ''}
+                      `;
+                    }}
   style={{
     scrollSnapAlign: isMobile ? "center" : "none",
     width: isMobile ? "calc(100vw - 40px)" : "360px",
     minWidth: isMobile ? "calc(100vw - 40px)" : "360px",
     maxWidth: "360px",
-    height: "100%",
+    height: isMobile ? "50vh" : "100%", // Changed from 100%
     backgroundColor: "#D3D3D3",
     borderRadius: "8px",
     padding: "8px",
@@ -1376,9 +1488,37 @@ useEffect(() => {
     flexShrink: 0,
     display: "flex",
     flexDirection: "column",
-    overscrollBehavior: "auto"  // Add this line
+    position: "relative",
+    overscrollBehavior: "contain",
+    scrollbarWidth: "thin",
+    scrollbarColor: "rgba(155, 155, 155, 0.7) transparent"
   }}
 >
+<style jsx>{`
+    [data-bus-tile]::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 50px;
+      background: linear-gradient(to bottom, var(--scroll-shadow-top, transparent), transparent);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    [data-bus-tile]::before {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 50px;
+      background: linear-gradient(to top, var(--scroll-shadow-bottom, transparent), transparent);
+      pointer-events: none;
+      z-index: 2;
+    }
+  `}</style>
                       <h2 style={{ fontSize: "1.3rem", fontWeight: "bold" }}>
                         <span style={{ fontSize: "1.8rem" }}>🚏</span>
                         {stop.stopName}{" "}
@@ -1648,6 +1788,7 @@ useEffect(() => {
                 })}
               </div>
             </div>
+          </div>
           </div>
         )}
       </BusContent>

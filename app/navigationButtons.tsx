@@ -86,10 +86,10 @@ const NavigationButtons: React.FC<NavigationButtonsProps> = ({ stopName }) => {
             alt="Google Maps"
             width={25}
             height={25}
-            onError={() => setImagesLoaded((prev) => ({ ...prev, google: false }))}
+            priority
           />
         </div>
-        {!imagesLoaded.google && <span style={fallbackStyle}>🗺️</span>}
+        {!imagesLoaded.google && <span style={fallbackStyle}>🗺️ Google Maps</span>}
       </div>
 
       {isIOS && (
@@ -106,10 +106,10 @@ const NavigationButtons: React.FC<NavigationButtonsProps> = ({ stopName }) => {
               alt="Apple Maps"
               width={25}
               height={25}
-              onError={() => setImagesLoaded((prev) => ({ ...prev, apple: false }))}
+              priority
             />
           </div>
-          {!imagesLoaded.apple && <span style={fallbackStyle}>🗺️</span>}
+          {!imagesLoaded.apple && <span style={fallbackStyle}>🗺️ Apple Maps</span>}
         </div>
       )}
     </div>
