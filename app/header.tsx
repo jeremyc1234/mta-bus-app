@@ -18,9 +18,16 @@ export default function Header() {
   const [isLocationChanging, setIsLocationChanging] = useState(false);
 
   const preserveUrlParams = (currentPath: string) => {
-    if (typeof window === 'undefined') return currentPath;
+    if (typeof window === 'undefined') {
+      // During server-side rendering, just return the path
+      return currentPath;
+    }
+    
     const url = new URL(window.location.href);
-    return `${currentPath}?${url.searchParams.toString()}`;
+    const searchParams = url.searchParams.toString();
+    
+    // If we have search params, append them, otherwise return just the path
+    return searchParams ? `${currentPath}?${searchParams}` : currentPath;
   };
 
   const handleLocationChange = async (newLocation: { lat: number | null; lon: number | null }) => {
@@ -172,7 +179,7 @@ export default function Header() {
             gap: '2rem',
           }}>
             <Link 
-              href={preserveUrlParams('/')}
+              href={pathname === '/' ? '/' : preserveUrlParams('/')}
               onClick={handleHomeClick}
               style={{
                 textDecoration: 'none',
@@ -185,7 +192,7 @@ export default function Header() {
               Home
             </Link>
             <Link 
-              href={preserveUrlParams('/schedules')}
+              href={pathname === '/schedules' ? '/schedules' : preserveUrlParams('/schedules')}
               style={{
                 textDecoration: 'none',
                 color: 'inherit',
@@ -197,7 +204,7 @@ export default function Header() {
               Schedules
             </Link>
             <Link 
-              href={preserveUrlParams('/about')}
+              href={pathname === '/about' ? '/about' : preserveUrlParams('/about')}
               style={{
                 textDecoration: 'none',
                 color: 'inherit',
@@ -246,44 +253,44 @@ export default function Header() {
   transition: 'transform 0.3s ease-in-out',
 }}>
   <Link 
-    href={preserveUrlParams('/')}
-    onClick={() => setIsMenuOpen(false)}
-    style={{
-      padding: '10px 0',
-      borderBottom: '1px solid #eee',
-      textDecoration: 'none',
-      color: 'inherit',
-      fontSize: '1.1rem',
-    }}
-  >
-    Home
-  </Link>
-  <Link 
-    href={preserveUrlParams('/schedules')}
-    onClick={() => setIsMenuOpen(false)}
-    style={{
-      padding: '10px 0',
-      borderBottom: '1px solid #eee',
-      textDecoration: 'none',
-      color: 'inherit',
-      fontSize: '1.1rem',
-    }}
-  >
-    Schedules
-  </Link>
-  <Link 
-    href={preserveUrlParams('/about')}
-    onClick={() => setIsMenuOpen(false)}
-    style={{
-      padding: '10px 0',
-      borderBottom: '1px solid #eee',
-      textDecoration: 'none',
-      color: 'inherit',
-      fontSize: '1.1rem',
-    }}
-  >
-    About
-  </Link>
+  href={pathname === '/' ? '/' : preserveUrlParams('/')}
+  onClick={() => setIsMenuOpen(false)}
+  style={{
+    padding: '10px 0',
+    borderBottom: '1px solid #eee',
+    textDecoration: 'none',
+    color: 'inherit',
+    fontSize: '1.1rem',
+  }}
+>
+  Home
+</Link>
+<Link 
+  href={pathname === '/schedules' ? '/schedules' : preserveUrlParams('/schedules')}
+  onClick={() => setIsMenuOpen(false)}
+  style={{
+    padding: '10px 0',
+    borderBottom: '1px solid #eee',
+    textDecoration: 'none',
+    color: 'inherit',
+    fontSize: '1.1rem',
+  }}
+>
+  Schedules
+</Link>
+<Link 
+  href={pathname === '/about' ? '/about' : preserveUrlParams('/about')}
+  onClick={() => setIsMenuOpen(false)}
+  style={{
+    padding: '10px 0',
+    borderBottom: '1px solid #eee',
+    textDecoration: 'none',
+    color: 'inherit',
+    fontSize: '1.1rem',
+  }}
+>
+  About
+</Link>
 </nav>
           </>
         )}
