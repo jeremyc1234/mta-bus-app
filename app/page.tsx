@@ -812,14 +812,11 @@ useEffect(() => {
                     transform: 'translateY(-50%)',
                   }}
                 >
-                  <img
+                  <Image
                     src={busIcon}
                     alt={isGoingUp ? 'Bus going up' : 'Bus going down'}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'contain',
-                    }}
+                    layout="fill"
+                    objectFit="contain"
                   />
                 </div>
               </div>
