@@ -1,5 +1,5 @@
 // headerSection.tsx
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, Suspense } from "react";
 import dynamic from "next/dynamic";
 
 const LocationDropdown = dynamic(() => import("./locationDropdown"), {
@@ -110,12 +110,14 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
                     <span style={{ fontSize: '1.8rem' }}>🚌</span>
                     Bus routes near
                 </span>
+                <Suspense fallback={<div>Loading Location Dropdown...</div>}>
                 <LocationDropdown
                     selectedStop={selectedStop}
                     onLocationChange={onLocationChange}
                     isLocationChanging={isLocationChanging}
                     setIsLocationChanging={setIsLocationChanging}
                 />
+                </Suspense>
             </div>
         </div>
     );

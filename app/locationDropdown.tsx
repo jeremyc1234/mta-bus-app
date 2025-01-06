@@ -146,7 +146,7 @@ const BUS_STOP_LOCATIONS: LocationOption[] = [
         label: newLocation.value.label,
         timestamp: Date.now()
       }, 
-      '', 
+      document.title, 
       url.toString()
     );
   };
@@ -328,7 +328,6 @@ const BUS_STOP_LOCATIONS: LocationOption[] = [
         url.searchParams.delete('lon');
         url.searchParams.delete('address');
         url.searchParams.delete('location');
-        url.searchParams.delete('timestamp');
         
         // Add new params
         if (selectedOption.isCustomAddress) {
@@ -340,16 +339,18 @@ const BUS_STOP_LOCATIONS: LocationOption[] = [
           url.searchParams.set('lat', selectedOption.value.lat.toString());
           url.searchParams.set('lon', selectedOption.value.lon.toString());
         }
-        url.searchParams.set('timestamp', Date.now().toString());
         
-        // Update URL without page reload
-        window.history.replaceState(
+        // Only use timestamp for state, not URL
+        const timestamp = Date.now();
+        
+        // Use pushState to create a new history entry
+        window.history.pushState(
           { 
             lat: selectedOption.value.lat,
             lon: selectedOption.value.lon,
             type: selectedOption.isCustomAddress ? 'address' : 'location',
             label: selectedOption.value.label,
-            timestamp: Date.now()
+            timestamp
           }, 
           '', 
           url.toString()

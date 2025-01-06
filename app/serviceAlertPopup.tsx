@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 
 interface ServiceAlert {
   route: string;
@@ -211,12 +212,12 @@ const ServiceAlertPopup: React.FC<ServiceAlertPopupProps> = ({ alert, onClose })
               borderRadius: '8px',
               overflow: 'hidden'
             }}>
-              <img
+              <Image
                 src={alert.mapLink}
                 alt="Map Preview"
+                width={500}
+                height={300}
                 style={{
-                  width: '100%',
-                  maxHeight: '300px',
                   objectFit: 'contain',
                   borderRadius: '8px',
                   border: '1px solid #ccc',

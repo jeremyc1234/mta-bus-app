@@ -708,7 +708,7 @@ useEffect(() => {
         </div>
       ));
     }, [stops, highlightedStop, userLocation, currentStop]);
-    BusRoutePopup.displayName = 'BusRoutePopup';
+BusRoutePopup.displayName = 'BusRoutePopup';
     const handleOverlayClick = useCallback((e: React.MouseEvent) => {
       if (e.target === e.currentTarget) {
         onClose();
@@ -808,15 +808,16 @@ useEffect(() => {
                     transform: 'translateY(-50%)',
                   }}
                 >
-                  <img
-                    src={busIcon}
-                    alt={isGoingUp ? 'Bus going up' : 'Bus going down'}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'contain',
-                    }}
-                  />
+                  <Image
+                  src={busIcon}
+                  alt={isGoingUp ? 'Bus going up' : 'Bus going down'}
+                  width={45}
+                  height={135}
+                  style={{
+                    objectFit: 'contain',
+                  }}
+                  priority
+                />
                 </div>
               </div>
 

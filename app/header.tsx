@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { FaBars } from "react-icons/fa";
 import { usePathname } from "next/navigation"; // Import usePathname
@@ -321,16 +321,18 @@ export default function Header() {
       </div>
       {/* ✅ Show HeaderSection Only on Home Page */}
       {pathname === '/' && (
-      <div style={{ borderTop: "1px solid #e0e0e0", }}>
-        <HeaderSection
-          selectedStop={selectedStop}
-          onLocationChange={handleLocationChange}
-          windowWidth={windowWidth}
-          isLocationChanging={isLocationChanging} // Ensure this is passed
-          setIsLocationChanging={setIsLocationChanging} // Ensure this is passed
-        />
-      </div>
-    )}
+  <div style={{ borderTop: "1px solid #e0e0e0" }}>
+    <Suspense fallback={<div>Loading Header Section...</div>}>
+      <HeaderSection
+        selectedStop={selectedStop}
+        onLocationChange={handleLocationChange}
+        windowWidth={windowWidth}
+        isLocationChanging={isLocationChanging}
+        setIsLocationChanging={setIsLocationChanging}
+      />
+    </Suspense>
+  </div>
+)}
     </header>
     
   );
