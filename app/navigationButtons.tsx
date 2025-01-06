@@ -33,16 +33,16 @@ const NavigationButtons: React.FC<NavigationButtonsProps> = ({ stopName }) => {
 
   const openGoogleMaps = () => {
     console.log('Opening Google Maps with stop name:', stopName);
-    const searchQuery = cleanStopName(stopName);
-    console.log('search query',searchQuery);
+    const searchQuery = cleanStopName(`${stopName}, NYC`);
+    console.log('search query', searchQuery);
     const url = `https://www.google.com/maps/search/${searchQuery}`;
     window.open(url, '_blank');
   };
-
+  
   const openAppleMaps = () => {
     console.log('Opening Apple Maps with stop name:', stopName);
-    const searchQuery = cleanStopName(stopName);
-    const url = `maps://maps.apple.com/?q=${searchQuery}+NYC`;
+    const searchQuery = cleanStopName(`${stopName}, NYC`);
+    const url = `maps://maps.apple.com/?q=${searchQuery}`;
     window.open(url, '_blank');
   };
 

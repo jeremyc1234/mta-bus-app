@@ -215,6 +215,18 @@ export default function Header() {
             >
               About
             </Link>
+            <Link 
+              href={pathname === '/feedback' ? '/feedback' : preserveUrlParams('/feedback')}
+              style={{
+                textDecoration: 'none',
+                color: 'inherit',
+                fontSize: '1.3rem',
+                fontWeight: '500',
+                padding: '0.5rem 1rem',
+              }}
+            >
+              Feedback
+            </Link>
           </nav>
         )}
 
@@ -291,6 +303,18 @@ export default function Header() {
 >
   About
 </Link>
+<Link 
+              href={pathname === '/feedback' ? '/feedback' : preserveUrlParams('/feedback')}
+              style={{
+                textDecoration: 'none',
+                color: 'inherit',
+                fontSize: '1.3rem',
+                fontWeight: '500',
+                padding: '0.5rem 1rem',
+              }}
+            >
+              Feedback
+            </Link>
 </nav>
           </>
         )}

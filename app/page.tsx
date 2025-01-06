@@ -7,6 +7,8 @@ import Image from 'next/image';
 import ServiceAlertPopup from './serviceAlertPopup'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import NavigationButtons from './navigationButtons';
+import { normalizeStopName, mergeStops } from './stopProcessing';
+import type { BusStop, BusData, BusArrival, MergedBusStop } from './stopProcessing';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -162,7 +164,7 @@ export default function Home() {
     const initialTimestamp = searchParams.get('timestamp') || String(Date.now());
     return initialTimestamp;
   });
-  
+
   useEffect(() => {
     if (!searchParams.has('timestamp')) {
       const newParams = new URLSearchParams(searchParams.toString());
@@ -1037,13 +1039,8 @@ useEffect(() => {
   }
 
 
-  let stopsSorted = [...(data.stops || [])].sort((a, b) => {
-    const distA = a.distance ?? 99999;
-    const distB = b.distance ?? 99999;
-    return distA - distB;
-  });
-
-  stopsSorted = stopsSorted.slice(0, 5);
+  let stopsSorted = mergeStops(data.stops || [], data);
+stopsSorted = stopsSorted.slice(0, 5);
 
   const stopsWithArrivals: any[] = [];
   const stopsNoArrivals: any[] = [];
@@ -1055,7 +1052,7 @@ useEffect(() => {
       stopsNoArrivals.push(stop);
     }
   }
-  const finalStops = [...stopsWithArrivals, ...stopsNoArrivals];
+  const finalStops = stopsSorted;
 
   const fetchRouteStops = async (routeId: string, tileStopName: string) => {
     try {
@@ -1079,36 +1076,45 @@ useEffect(() => {
   };
 
   function getStopArrivals(stopId: string) {
-    const visits = data.arrivals?.[stopId] || [];
+    // Handle multiple stop IDs (for merged stops)
+    const stopIds = stopId.split(',');
+    const visits: any[] = [];
+    
+    // Collect arrivals from all related stop IDs
+    stopIds.forEach(id => {
+      const stopArrivals = data.arrivals?.[id] || [];
+      visits.push(...stopArrivals);
+    });
+  
     const routeDirectionMap: Record<string, Record<string, any[]>> = {};
-
+  
     visits.forEach((visit: any) => {
       const mvj = visit.MonitoredVehicleJourney;
       if (!mvj) return;
-
+  
       let route = "Unknown Route";
       if (mvj.LineRef) {
         route = mvj.LineRef.replace("MTA NYCT_", "")
           .replace("MTABC_", "");
       }
-
+  
       const destination = mvj.DestinationName || "Unknown Destination";
       const directionKey = `to ${destination}`;
-
+  
       if (!routeDirectionMap[route]) {
         routeDirectionMap[route] = {};
       }
       if (!routeDirectionMap[route][directionKey]) {
         routeDirectionMap[route][directionKey] = [];
       }
-
+  
       const vehicleRef = mvj?.VehicleRef?.replace(/^\D+/, '') || 'Unknown VehicleRef';
       routeDirectionMap[route][directionKey].push({
         ...visit,
         vehicleRef
       });
     });
-
+  
     return routeDirectionMap;
   }
 
@@ -1353,9 +1359,8 @@ useEffect(() => {
                 )}
                 
                 {finalStops.map((stop: any) => {
-                  const arrivalsArray = data.arrivals?.[stop.stopId] || [];
-                  const hasBuses = arrivalsArray.length > 0;
                   const routeMap = getStopArrivals(stop.stopId);
+                  const hasBuses = Object.keys(routeMap).length > 0;
                   const hasMultipleRoutes = Object.keys(routeMap).length > 1;
 
                   return (
