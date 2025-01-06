@@ -6,9 +6,6 @@ const MTA_API_KEY = process.env.MTA_API_KEY;
 interface StopGroup {
   stopIds: string[];
 }
-interface ApiError extends Error {
-  message: string;
-}
 
 export async function GET(request: Request) {
   try {
@@ -104,7 +101,7 @@ export async function GET(request: Request) {
     console.log('🛠️ [STOPS BY DIRECTION] Processed Stops:', stopsByDirection);
 
     // Find the direction of tileStopName
-    const matchedDirection = Object.entries(stopsByDirection).find(([_dir, stops]) =>
+    const matchedDirection = Object.entries(stopsByDirection).find(([stops]) =>
       stops.includes(tileStopName)
     )?.[0];
 

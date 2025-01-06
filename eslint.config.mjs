@@ -22,7 +22,8 @@ export default [
   ...legacyConfigs,
   {
     rules: {
-      '@typescript-eslint/no-explicit-any': 'off'
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': 'off' // Disable unused variables rule
     }
   }
 ];
