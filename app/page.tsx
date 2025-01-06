@@ -71,6 +71,7 @@ const BUS_STOP_LOCATIONS = [
   { label: "Roosevelt Island Tramway", lat: 40.7614, lon: -73.9493 },
 ];
 
+
 const isWithinNYC = (lat: number, lon: number) => {
   // NYC bounds (approximate)
   const NYC_BOUNDS = {
@@ -707,7 +708,7 @@ useEffect(() => {
         </div>
       ));
     }, [stops, highlightedStop, userLocation, currentStop]);
-
+    BusRoutePopup.displayName = 'BusRoutePopup';
     const handleOverlayClick = useCallback((e: React.MouseEvent) => {
       if (e.target === e.currentTarget) {
         onClose();
@@ -1037,7 +1038,6 @@ useEffect(() => {
       </div>
     );
   }
-
 
   let stopsSorted = mergeStops(data.stops || [], data);
 stopsSorted = stopsSorted.slice(0, 5);

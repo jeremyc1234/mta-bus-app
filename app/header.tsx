@@ -176,7 +176,7 @@ export default function Header() {
             left: '50%',
             transform: 'translateX(-50%)',
             display: 'flex',
-            gap: '2rem',
+            gap: '0.25rem',
           }}>
             <Link 
               href={pathname === '/' ? '/' : preserveUrlParams('/')}

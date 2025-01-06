@@ -561,7 +561,7 @@ type BoroughRoutes = Record<Borough, RouteGroup[]>;
         }}
       >
         Here you can find an exhaustive list of New York City bus stops provided by the MTA. 
-        Simply search for a stop or click on the dropdown for the borough you're interested in and you will find links to 
+        Simply search for a stop or click on the dropdown for the borough you&apos;re interested in and you will find links to 
         all of the schedule information available from the MTA.
       </p>
 

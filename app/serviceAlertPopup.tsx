@@ -43,7 +43,7 @@ const ServiceAlertPopup: React.FC<ServiceAlertPopupProps> = ({ alert, onClose })
   }, [alert?.updatedTime]);
 
   const formatDescription = (description: string) => {
-    let formattedText = description.replace(/\n/g, ' ');
+    const formattedText = description.replace(/\n/g, ' ');
     const segments = formattedText.split(/(What's happening\?|Note:)/gi);
 
     return segments.map((segment, index) => {
@@ -151,7 +151,7 @@ const ServiceAlertPopup: React.FC<ServiceAlertPopupProps> = ({ alert, onClose })
               const [emoji, ...rest] = part.split("What's happening?");
               return (
                 <span key={index}>
-                  {emoji}<strong>What's happening?</strong>{rest}
+                  {emoji}<strong>What&apos;s happening?</strong>{rest}
                 </span>
               );
             } else if (part.includes("Note:")) {
