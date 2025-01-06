@@ -1217,23 +1217,23 @@ useEffect(() => {
                     padding: "8px 12px",
                     borderRadius: "8px",
                     display: "flex",
-                    alignItems: "center",
+                    alignItems: "center", 
                     gap: "8px",
                     position: "absolute",
                     top: "20px",
                     left: "50%",
-                    transform: "translateX(-50%)",
+                    transform: `translate(-50%, ${isFadingOut ? -20 : 0}px)`,
                     zIndex: 1500,
                     textAlign: "center",
                     width: windowWidth < 768 ? "90%" : "auto",
                     maxWidth: windowWidth < 768 ? "100%" : "90%",
                     boxSizing: "border-box",
-                    transition: "opacity 1s ease-in-out",
+                    transition: "opacity 1s ease-out, transform 1s ease-out",
                     opacity: isFadingOut ? 0 : 1,
                     wordWrap: "break-word",
                     whiteSpace: "normal",
                     lineHeight: "1.4",
-                    fontSize: "0.95rem",
+                    fontSize: "0.95rem"
                   }}
                 >
                 <span
@@ -1668,7 +1668,7 @@ useEffect(() => {
 }
 const Home = () => {
   return (
-    <Suspense fallback={<div>Loading Home...</div>}>
+    <Suspense fallback={<div></div>}>
       <HomeContent />
     </Suspense>
   );

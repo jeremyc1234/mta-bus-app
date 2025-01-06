@@ -46,3 +46,15 @@ body {
 .scroll-container {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */}
+
+  @keyframes pulse {
+    0% {
+      background-color: #fff3cd;
+    }
+    50% {
+      background-color: #ffecb5;
+    }
+    100% {
+      background-color: #fff3cd;
+    }
+  }

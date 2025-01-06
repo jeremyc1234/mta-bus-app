@@ -161,7 +161,7 @@ export default function Header() {
           <Image
             src="/icons/logo.png"
             alt="Logo"
-            width={180} // Set appropriate width
+            width={160} // Set appropriate width
             height={60} // Set appropriate height
             priority // Ensures the logo is preloaded for better performance
             style={{
