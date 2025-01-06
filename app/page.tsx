@@ -158,10 +158,7 @@ const HomeContent = () => {
   const [isScrollableRight, setIsScrollableRight] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const [timestamp, setTimestamp] = useState(() => {
-    const initialTimestamp = searchParams.get('timestamp') || String(Date.now());
-    return initialTimestamp;
-  });
+  const [timestamp, setTimestamp] = useState(() => String(Date.now()));
   
   const normalizeStopName = (name: string) => {
     return name
@@ -846,7 +843,7 @@ useEffect(() => {
       prevProps.stops.every((stop, index) => stop === nextProps.stops[index]);
     return areEqual;
   });
-  
+
   BusRoutePopup.displayName = 'BusRoutePopup';
 
   useEffect(() => {
@@ -1126,10 +1123,10 @@ useEffect(() => {
     return routeDirectionMap;
   }
 
-  const updatedDate = new Date(data.timestamp);
+  const updatedDate = new Date();
   const updatedTimeString = updatedDate.toLocaleTimeString([], {
     hour: "2-digit",
-    minute: "2-digit",
+    minute: "2-digit"
   });
 
   function getMinutesAway(dateString: string) {
