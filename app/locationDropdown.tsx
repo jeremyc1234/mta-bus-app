@@ -406,12 +406,63 @@ const BUS_STOP_LOCATIONS: LocationOption[] = [
       borderRadius: '8px',
       boxShadow: '0 4px 11px rgba(0, 0, 0, 0.1)'
     }),
-    option: (provided: any, { isSelected, isFocused }: { isSelected: boolean; isFocused: boolean }) => ({
-      ...provided,
-      backgroundColor: isSelected ? '#2684FF' : isFocused ? '#f0f0f0' : 'white',
-      color: isSelected ? 'white' : 'black'
-    })
-  };
+    option: (provided: any, { isSelected, isFocused, data }: any) => {
+      const isSameAsCurrent = selectedValue?.value?.lat === data.value.lat &&
+                              selectedValue?.value?.lon === data.value.lon;
+    
+      const isClosestStop = data.label.includes('Closest stop to you');
+      const isEstimatedBusLocation = data.label.includes('Our estimated bus location');
+      const isMTAProvided = data.label.includes('MTA provided bus location');
+    
+      let backgroundColor = 'white';
+      let color = 'black';
+      let fontWeight = 'normal';
+    
+      // Check combinations first
+      if (isClosestStop && (isEstimatedBusLocation || isMTAProvided)) {
+        // If closest stop is combined with either estimated or MTA location
+        backgroundColor = '#2684FF'; // Blue
+        color = 'white';
+        fontWeight = 'bold';
+      } else if (isEstimatedBusLocation && isMTAProvided) {
+        // If estimated location and MTA location are at same stop
+        backgroundColor = '#FFD700'; // Gold
+        color = 'black';
+        fontWeight = 'bold';
+      } else if (isClosestStop) {
+        // Individual closest stop
+        backgroundColor = '#2684FF'; // Blue
+        color = 'white';
+        fontWeight = 'bold';
+      } else if (isEstimatedBusLocation) {
+        // Individual estimated location
+        backgroundColor = '#FFD700'; // Gold
+        color = 'black';
+        fontWeight = 'bold';
+      } else if (isMTAProvided) {
+        // Individual MTA location
+        backgroundColor = '#FFFF00'; // Yellow
+        color = 'black';
+        fontWeight = 'bold';
+      } else if (isSameAsCurrent) {
+        backgroundColor = '#2684FF'; // Blue for current selected location
+        color = 'white';
+        fontWeight = 'bold';
+      } else if (isSelected) {
+        backgroundColor = '#2684FF'; // Blue for any selected option
+        color = 'white';
+      } else if (isFocused) {
+        backgroundColor = '#f0f0f0'; // Light gray for hover
+      }
+    
+      return {
+        ...provided,
+        backgroundColor,
+        color,
+        fontWeight
+      };
+    }
+  };  
 
   return (
     <Select

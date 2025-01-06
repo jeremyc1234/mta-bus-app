@@ -1454,11 +1454,12 @@ useEffect(() => {
                 
                 {finalStops.map((stop: any, index: number) => {
   const isFirstTile = index === 0;
-
+  const isLastTile = index === finalStops.length - 1;
   const arrivalsArray = data.arrivals?.[stop.stopId] || [];
   const hasBuses = arrivalsArray.length > 0;
   const routeMap = getStopArrivals(stop.stopId);
   const hasMultipleRoutes = Object.keys(routeMap).length > 1;
+
 
   return (
     <div
@@ -1486,58 +1487,76 @@ useEffect(() => {
         scrollbarColor: "rgba(155, 155, 155, 0.7) transparent"
       }}
     >
-      {/* 🚀 ARROW BUTTONS ABOVE STOP NAME */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: '8px' 
-      }}>
-        {/* LEFT ARROW (Hidden on First Tile) */}
-        {isMobile && index > 0 && (
-          <button
-            onClick={() => {
-              if (scrollContainerRef.current) {
-                const tileWidth = scrollContainerRef.current.querySelector('[data-bus-tile]')?.clientWidth || 360;
-                scrollContainerRef.current.scrollBy({ left: -tileWidth - 15, behavior: 'smooth' });
-              }
-            }}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '20px',
-              zIndex: 100,
-            }}
-          >
-            👈
-          </button>
-        )}
+      {/* Navigation Container - Only render if mobile and has arrows */}
+      {isMobile && (
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          height: '36px', // Fixed height for consistency
+          marginBottom: '8px',
+          padding: '0 4px'
+        }}>
+          {/* Left Arrow or Spacer */}
+          <div style={{ width: '30px', height: '30px', display: 'flex', alignItems: 'center' }}>
+            {index > 0 && (
+              <button
+                onClick={() => {
+                  if (scrollContainerRef.current) {
+                    const tileWidth = scrollContainerRef.current.querySelector('[data-bus-tile]')?.clientWidth || 360;
+                    scrollContainerRef.current.scrollBy({ left: -tileWidth - 15, behavior: 'smooth' });
+                  }
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '20px',
+                  padding: '0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100%',
+                  height: '100%'
+                }}
+              >
+                👈
+              </button>
+            )}
+          </div>
 
-        {/* RIGHT ARROW (Hidden on Last Tile) */}
-        {isMobile && index < finalStops.length - 1 && (
-          <button
-            onClick={() => {
-              if (scrollContainerRef.current) {
-                const tileWidth = scrollContainerRef.current.querySelector('[data-bus-tile]')?.clientWidth || 360;
-                scrollContainerRef.current.scrollBy({ left: tileWidth + 15, behavior: 'smooth' });
-              }
-            }}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '20px',
-              zIndex: 100,
-              position: 'absolute',
-              top: '8px',
-              right: '8px',
-            }}
-          >
-            👉
-          </button>
-        )}
-      </div>
+          {/* Center Spacer */}
+          <div style={{ flex: 1 }} />
+
+          {/* Right Arrow or Spacer */}
+          <div style={{ width: '30px', height: '30px', display: 'flex', alignItems: 'center' }}>
+            {!isLastTile && (
+              <button
+                onClick={() => {
+                  if (scrollContainerRef.current) {
+                    const tileWidth = scrollContainerRef.current.querySelector('[data-bus-tile]')?.clientWidth || 360;
+                    scrollContainerRef.current.scrollBy({ left: tileWidth + 15, behavior: 'smooth' });
+                  }
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '20px',
+                  padding: '0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100%',
+                  height: '100%'
+                }}
+              >
+                👉
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
 
       <h2 style={{
