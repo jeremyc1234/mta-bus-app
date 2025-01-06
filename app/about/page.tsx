@@ -40,7 +40,7 @@ export default function About() {
       >
         Welcome to MTA Bus Finder! This application helps you track New York City buses
         in real-time, providing up-to-date information about bus arrivals and departures
-        across the city's extensive network.
+        across the city&apos;s extensive network.
       </p>
       <h2
         style={{

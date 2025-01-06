@@ -11,7 +11,21 @@ declare global {
   var redis: Redis | undefined;
 }
 
-let redis: Redis;
+interface MTAStop {
+  id: string;
+  name: string;
+  lat: number | string;
+  lon: number | string;
+  routes?: {
+    shortName: string;
+  }[];
+}
+
+interface StopVisit {
+  stopId: string;
+  arrivals: unknown[];
+}
+
 function getOrInitializeRedis() {
   if (process.env.NODE_ENV !== 'development') {
     return new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
@@ -22,7 +36,7 @@ function getOrInitializeRedis() {
     return global.redis;
   }
 }
-redis = getOrInitializeRedis();
+const redis = getOrInitializeRedis();
 
 const MTA_API_KEY = process.env.MTA_API_KEY;
 const CACHE_TTL = parseInt(process.env.CACHE_TTL || '30');
@@ -100,11 +114,11 @@ export async function GET(request: Request) {
     }
 
     const stopsData = await stopsRes.json();
-    const stops = stopsData?.data?.stops || [];
+    const stops = stopsData?.data?.stops || [] as MTAStop[];
 
     // 2) For each stop, fetch arrivals from SIRI (up to 3 visits)
     const arrivals = await Promise.all(
-      stops.map(async (stop: any) => {
+      stops.map(async (stop: MTAStop) => {    
         const monitoringUrl = `http://bustime.mta.info/api/siri/stop-monitoring.json?key=${MTA_API_KEY}&MonitoringRef=${stop.id}&MaximumStopVisits=3`;
         try {
           const arrivalsRes = await fetch(monitoringUrl, {
@@ -121,9 +135,7 @@ export async function GET(request: Request) {
           }
 
           const arrivalsData = await arrivalsRes.json();
-          const visits =
-            arrivalsData?.Siri?.ServiceDelivery?.StopMonitoringDelivery?.[0]
-              ?.MonitoredStopVisit || [];
+          const visits = arrivalsData?.Siri?.ServiceDelivery?.StopMonitoringDelivery?.[0]?.MonitoredStopVisit || [] as unknown[];
 
           return {
             stopId: stop.id,
@@ -137,7 +149,7 @@ export async function GET(request: Request) {
     );
 
     // 3) Compute distance for each stop
-    const computedStops = stops.map((stop: any) => {
+    const computedStops = stops.map((stop: MTAStop) => {
       let distanceMiles: number | null = null;
 
       if (typeof stop.lat === 'number' && typeof stop.lon === 'number') {

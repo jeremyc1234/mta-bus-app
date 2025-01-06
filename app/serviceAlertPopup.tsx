@@ -23,7 +23,7 @@ const ServiceAlertPopup: React.FC<ServiceAlertPopupProps> = ({ alert, onClose })
   useEffect(() => {
     if (alert?.updatedTime) {
       const updatedDate = new Date(alert.updatedTime);
-      
+
       if (isNaN(updatedDate.getTime())) {
         setFormattedUpdatedTime(alert.updatedTime);
       } else {
@@ -43,13 +43,9 @@ const ServiceAlertPopup: React.FC<ServiceAlertPopupProps> = ({ alert, onClose })
   }, [alert?.updatedTime]);
 
   const formatDescription = (description: string) => {
-    // First, normalize any existing newlines to single spaces
     let formattedText = description.replace(/\n/g, ' ');
-    
-    // Split the text at our special phrases and create an array
     const segments = formattedText.split(/(What's happening\?|Note:)/gi);
-    
-    // Process each segment
+
     return segments.map((segment, index) => {
       if (segment.toLowerCase() === "what's happening?") {
         return `\n\n🙋 ${segment}`;
@@ -59,6 +55,9 @@ const ServiceAlertPopup: React.FC<ServiceAlertPopupProps> = ({ alert, onClose })
       return segment;
     }).join('').replace(/See a map/gi, '').trim();
   };
+
+  const shouldShowDescription = alert.description?.trim() && !/^of this stop change\.?$/i.test(alert.description.trim());
+  const shouldShowNotice = alert.notice?.trim() && alert.notice.trim() !== "Real-time tracking on BusTime may be inaccurate in the service change area";
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -141,56 +140,53 @@ const ServiceAlertPopup: React.FC<ServiceAlertPopupProps> = ({ alert, onClose })
           <strong>📝 Summary:</strong> {alert.summary}
         </p>
         
-        {alert.description && alert.description.trim() && (() => {
-  const descriptionStart = alert.description.match(/What's happening\?/i);
+        {shouldShowDescription && (() => {
+          const descriptionStart = alert.description.match(/What's happening\?/i);
+          const hasPrecedingText = descriptionStart 
+            ? alert.description.substring(0, descriptionStart.index).trim().length > 0
+            : true;
 
-  // Check if there's meaningful text before "What's happening?"
-  const hasPrecedingText = descriptionStart 
-    ? alert.description.substring(0, descriptionStart.index).trim().length > 0
-    : true;
+          const formattedDescription = formatDescription(alert.description).split('\n').map((part, index) => {
+            if (part.includes("What's happening?")) {
+              const [emoji, ...rest] = part.split("What's happening?");
+              return (
+                <span key={index}>
+                  {emoji}<strong>What's happening?</strong>{rest}
+                </span>
+              );
+            } else if (part.includes("Note:")) {
+              const [emoji, ...rest] = part.split("Note:");
+              return (
+                <span key={index}>
+                  {emoji}<strong>Note:</strong>{rest}
+                </span>
+              );
+            }
+            return <span key={index}>{part}</span>;
+          });
 
-  const formattedDescription = formatDescription(alert.description).split('\n').map((part, index) => {
-    if (part.includes("What's happening?")) {
-      const [emoji, ...rest] = part.split("What's happening?");
-      return (
-        <span key={index}>
-          {emoji}<strong>What's happening?</strong>{rest}
-        </span>
-      );
-    } else if (part.includes("Note:")) {
-      const [emoji, ...rest] = part.split("Note:");
-      return (
-        <span key={index}>
-          {emoji}<strong>Note:</strong>{rest}
-        </span>
-      );
-    }
-    return <span key={index}>{part}</span>;
-  });
+          return hasPrecedingText ? (
+            <p style={{ marginBottom: '15px', whiteSpace: 'pre-line' }}>
+              <strong>📄 Description:</strong> {formattedDescription.map((element, i) => (
+                <React.Fragment key={i}>
+                  {element}
+                  {i !== formattedDescription.length - 1 && <br />}
+                </React.Fragment>
+              ))}
+            </p>
+          ) : (
+            <p style={{ marginBottom: '15px', whiteSpace: 'pre-line' }}>
+              {formattedDescription.map((element, i) => (
+                <React.Fragment key={i}>
+                  {element}
+                  {i !== formattedDescription.length - 1 && <br />}
+                </React.Fragment>
+              ))}
+            </p>
+          );
+        })()}
 
-  // Render Description only if there's meaningful preceding text
-  return hasPrecedingText ? (
-    <p style={{ marginBottom: '15px', whiteSpace: 'pre-line' }}>
-      <strong>📄 Description:</strong> {formattedDescription.map((element, i) => (
-        <React.Fragment key={i}>
-          {element}
-          {i !== formattedDescription.length - 1 && <br />}
-        </React.Fragment>
-      ))}
-    </p>
-  ) : (
-    <p style={{ marginBottom: '15px', whiteSpace: 'pre-line' }}>
-      {formattedDescription.map((element, i) => (
-        <React.Fragment key={i}>
-          {element}
-          {i !== formattedDescription.length - 1 && <br />}
-        </React.Fragment>
-      ))}
-    </p>
-  );
-})()}
-
-        {alert.notice && (
+        {shouldShowNotice && (
           <p style={{ 
             marginBottom: '15px', 
             color: 'red', 

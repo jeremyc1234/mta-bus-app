@@ -7,9 +7,10 @@ import React, {
   useRef,
   useEffect,
   memo,
-  RefObject
 } from 'react';
 import { useLockBodyScroll } from '@uidotdev/usehooks';
+import Image from 'next/image';
+
 
 const RainbowAnimation = `
   @keyframes rainbowMove {
@@ -75,13 +76,11 @@ const BusRoutePopup = memo(({
   userLocation,
   tileStopName,
   stopsAway,
-  vehicleRef,
 }: BusRoutePopupProps) => {useEffect(() => {
     // console.log('🛑 Stops Away in Popup:', stopsAway);
   }, [stopsAway]);
   const scrollableRef = useRef<HTMLDivElement>(null);
   const [stopPosition, setStopPosition] = useState<'above' | 'below' | 'visible'>('below');
-  const [highlightedStop, setHighlightedStop] = useState<string | null>(null);
 
   useLockBodyScroll();
 
@@ -137,8 +136,6 @@ const BusRoutePopup = memo(({
     return (clampedIndex / (adjustedStops.length - 1)) * 100;
   }, [adjustedStops, estimatedStopIndex, currentStop]);
 
-  const [isClosestStopVisible, setIsClosestStopVisible] = useState(false);
-
   // Stable scroll handler using ref
   const handleScroll = useCallback((event: Event) => {
     const scrollEl = event.target as HTMLDivElement;
@@ -165,6 +162,8 @@ const BusRoutePopup = memo(({
     }
   }, []);
 
+  BusRoutePopup.displayName = 'BusRoutePopup';
+
   useEffect(() => {
     const timer = setTimeout(() => {
       const scrollEl = scrollableRef.current;
@@ -184,15 +183,6 @@ const BusRoutePopup = memo(({
     return () => clearTimeout(timer);
   }, [tileStopName, estimatedStopIndex, adjustedStops]);
 
-  const Dot = () => (
-    <div style={{
-      width: '20px',
-      height: '20px',
-      borderRadius: '50%',
-      backgroundColor: '#0078D7',
-      margin: '4px 0'
-    }} />
-  );
 
   // Set up scroll listener
   useEffect(() => {
@@ -406,16 +396,16 @@ useEffect(() => {
       WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 30%)',
       maskImage: 'linear-gradient(to bottom, transparent, black 30%)'
     }} />
-    <img
+    <Image
       src={busIcon}
       alt={isGoingUp ? 'Bus going up' : 'Bus going down'}
+      width={80}
+      height={120}
       style={{
-        width: '80px',
-        height: '120px',
         objectFit: 'contain',
         position: 'relative',
         zIndex: 3,
-        marginLeft: '-30px' // Slight adjustment to nudge the bus leftwards
+        marginLeft: '-30px'
       }}
     />
   </div>
@@ -481,19 +471,19 @@ useEffect(() => {
     </span>
 
     {/* Caret Icon */}
-    <img
+    <Image
       src={stopPosition === 'above' ? '/icons/up_caret.png' : '/icons/down_caret.png'}
       alt={stopPosition === 'above' ? 'Scroll Up' : 'Scroll Down'}
+      width={60}
+      height={24}
       style={{
-        width: '60px',
-        height: '24px',
         pointerEvents: 'auto',
         cursor: 'pointer',
         position: 'relative',
         zIndex: 11,
         margin: stopPosition === 'above' ? '8px 0 0' : '0 0 20px',
-        opacity: stopPosition === 'visible' ? 0 : 1, // Fade in/out
-        transition: 'opacity 0.5s ease-in-out', // Smooth fade transition
+        opacity: stopPosition === 'visible' ? 0 : 1,
+        transition: 'opacity 0.5s ease-in-out',
       }}
       onClick={() => {
         if (scrollableRef.current) {

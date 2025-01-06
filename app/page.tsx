@@ -67,10 +67,22 @@ const BUS_STOP_LOCATIONS = [
   { label: "Richmond Town", lat: 40.5706, lon: -74.1455 },
 
   { label: "Roosevelt Island Tramway", lat: 40.7614, lon: -73.9493 },
-
-  // Other
-  { label: "Other (Enter Address)", lat: null, lon: null }
 ];
+
+const isWithinNYC = (lat: number, lon: number) => {
+  // NYC bounds (approximate)
+  const NYC_BOUNDS = {
+    north: 40.9176,  // Upper Manhattan/Bronx
+    south: 40.4774,  // South Staten Island
+    east: -73.7004,  // Eastern Queens
+    west: -74.2591   // Western Staten Island
+  };
+  
+  return lat >= NYC_BOUNDS.south && 
+         lat <= NYC_BOUNDS.north && 
+         lon >= NYC_BOUNDS.west && 
+         lon <= NYC_BOUNDS.east;
+};
 
 interface DropdownProps {
   isOpen: boolean;
@@ -121,6 +133,7 @@ export default function Home() {
     lon: !isNaN(defaultLon) ? defaultLon : FALLBACK_LON,
   });
 
+  const [isOutsideNYC, setIsOutsideNYC] = useState<boolean>(false);
 
   const [locationLocked, setLocationLocked] = useState(!!(initialLat && initialLon));
   const [routesWithAlerts, setRoutesWithAlerts] = useState<Record<string, boolean>>({});
@@ -130,7 +143,20 @@ export default function Home() {
   const [isScrollableLeft, setIsScrollableLeft] = useState(false);
   const [isScrollableRight, setIsScrollableRight] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  
+  const [timestamp, setTimestamp] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const currentTimestamp = params.get('timestamp') || Date.now().toString();
+    
+    if (!params.has('timestamp')) {
+      params.set('timestamp', currentTimestamp);
+      router.replace(`?${params.toString()}`);
+    }
+
+    setTimestamp(currentTimestamp);
+  }, [router]);
+
   const checkScrollable = () => {
     const el = scrollContainerRef.current;
     if (el) {
@@ -197,7 +223,6 @@ export default function Home() {
     const addressParam = searchParams.get('address');
     const lat = searchParams.get('lat');
     const lon = searchParams.get('lon');
-    const timestamp = searchParams.get('timestamp');
   
     // If we have location parameters in the URL
     if (locationLabel || (lat && lon)) {
@@ -232,23 +257,53 @@ export default function Home() {
     if (!locationLocked && "geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const newLocation = {
-            lat: position.coords.latitude,
-            lon: position.coords.longitude
-          };
-          setLocation(newLocation);
-          setLocationServicesEnabled(true);
+          const newLat = position.coords.latitude;
+          const newLon = position.coords.longitude;
           
-          // Update URL with geolocation
-          const url = new URL(window.location.href);
-          url.searchParams.set('lat', newLocation.lat.toString());
-          url.searchParams.set('lon', newLocation.lon.toString());
-          url.searchParams.set('timestamp', Date.now().toString());
-          window.history.replaceState(
-            { ...newLocation, timestamp: Date.now() },
-            '',
-            url.toString()
-          );
+          if (isWithinNYC(newLat, newLon)) {
+            const newLocation = {
+              lat: newLat,
+              lon: newLon
+            };
+            setLocation(newLocation);
+            setLocationServicesEnabled(true);
+            setIsOutsideNYC(false);
+            
+            // Update URL with geolocation
+            const url = new URL(window.location.href);
+            url.searchParams.set('timestamp', Date.now().toString());
+            window.history.replaceState(
+              { ...location, timestamp: Date.now() },
+              document.title,
+              url.toString()
+            );
+          } else {
+            setLocationServicesEnabled(true);  // They have location services, just outside NYC
+            setIsOutsideNYC(true);
+            setIsBannerVisible(true);
+            // Set Union Square as default with proper URL parameters
+            const defaultLocation = BUS_STOP_LOCATIONS[0]; // Union Square
+            if (defaultLocation.lat !== null && defaultLocation.lon !== null) {
+              setLocation({ 
+                lat: defaultLocation.lat, 
+                lon: defaultLocation.lon 
+              });
+              const url = new URL(window.location.href);
+              url.searchParams.set('location', defaultLocation.label);
+              url.searchParams.set('lat', defaultLocation.lat.toString());
+              url.searchParams.set('lon', defaultLocation.lon.toString());
+              window.history.replaceState(
+                { 
+                  lat: defaultLocation.lat, 
+                  lon: defaultLocation.lon,
+                  type: 'location',
+                  label: defaultLocation.label
+                },
+                '',
+                url.toString()
+              );
+            }
+          }
         },
         (error) => {
           setLocationServicesEnabled(false);
@@ -307,58 +362,31 @@ useEffect(() => {
     const state = event.state;
     const url = new URL(window.location.href);
     
-    // Get parameters from URL
     const lat = url.searchParams.get('lat');
     const lon = url.searchParams.get('lon');
     const locationParam = url.searchParams.get('location');
     const addressParam = url.searchParams.get('address');
 
-    // Handle history state if available
     if (state && state.lat && state.lon) {
-      setLocation({
-        lat: state.lat,
-        lon: state.lon
-      });
+      setLocation({ lat: state.lat, lon: state.lon });
       setSelectedStop(state.label || null);
       return;
     }
 
-    // Fallback to URL parameters if no state
-    if (locationParam) {
-      const predefinedLocation = BUS_STOP_LOCATIONS.find(
-        loc => loc.label === decodeURIComponent(locationParam)
-      );
-
-      if (predefinedLocation && predefinedLocation.lat && predefinedLocation.lon) {
-        setLocation({
-          lat: predefinedLocation.lat,
-          lon: predefinedLocation.lon,
-        });
-        setSelectedStop(locationParam);
-        return;
-      }
-    }
-
     if (lat && lon) {
-      setLocation({
-        lat: parseFloat(lat),
-        lon: parseFloat(lon)
-      });
+      setLocation({ lat: parseFloat(lat), lon: parseFloat(lon) });
       if (addressParam) {
         setSelectedStop(addressParam);
+      } else if (locationParam) {
+        setSelectedStop(locationParam);
       }
       return;
     }
 
-    // If no valid location found, use default (Union Square)
+    // Default to Union Square if no valid state is found
     const defaultLocation = BUS_STOP_LOCATIONS[0];
-    if (defaultLocation.lat !== null && defaultLocation.lon !== null) {
-      setLocation({
-        lat: defaultLocation.lat,
-        lon: defaultLocation.lon,
-      });
-      setSelectedStop(defaultLocation.label);
-    }
+    setLocation({ lat: defaultLocation.lat, lon: defaultLocation.lon });
+    setSelectedStop(defaultLocation.label);
   };
 
   window.addEventListener('popstate', handlePopState);
@@ -816,7 +844,7 @@ useEffect(() => {
       // Start fade-out animation at 10 seconds
       const fadeTimer = setTimeout(() => {
         setIsFadingOut(true);
-      }, 10000);
+      }, 15000);
 
       // Fully hide the banner at 15 seconds
       const hideTimer = setTimeout(() => {
@@ -1112,60 +1140,64 @@ useEffect(() => {
               justifyContent: "flex-start", // Align content to the top
               gap: "8px",
             }} className={inter.className}>
-              {isBannerVisible && !locationServicesEnabled && (
-                <div
+              {isBannerVisible && (
+              <div
+                style={{
+                  backgroundColor: "rgba(255, 204, 187, 0.9)",
+                  color: "#FF3632",
+                  padding: "8px 12px",
+                  borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  position: "absolute",
+                  top: "20px",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  zIndex: 1500,
+                  textAlign: "center",
+                  width: windowWidth < 768 ? "90%" : "auto",
+                  maxWidth: windowWidth < 768 ? "100%" : "90%",
+                  boxSizing: "border-box",
+                  transition: "opacity 1s ease-in-out",
+                  opacity: isFadingOut ? 0 : 1,
+                  wordWrap: "break-word",
+                  whiteSpace: "normal",
+                  lineHeight: "1.4",
+                  fontSize: "0.95rem",
+                }}
+              >
+                <span
+  style={{
+    fontWeight: "bold",
+    whiteSpace: "normal",
+    wordWrap: "break-word",
+    textAlign: "center",
+    flex: 1,
+  }}
+>
+  {!locationServicesEnabled 
+    ? "📍 Please turn on location services to get information for the closest stops to you!"
+    : isOutsideNYC 
+      ? "📍 Doesn't look like you're in NYC! Please select from the dropdown or type in an address."
+      : "📍 Please turn on location services to get information for the closest stops to you!"}
+</span>
+                <button
+                  onClick={() => setIsBannerVisible(false)}
                   style={{
-                    backgroundColor: "rgba(255, 204, 187, 0.9)",
+                    background: "none",
+                    border: "none",
+                    fontSize: "1.2rem",
+                    cursor: "pointer",
+                    marginLeft: "8px",
                     color: "#FF3632",
-                    padding: "8px 12px",
-                    borderRadius: "8px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    position: "absolute",
-                    top: "20px",
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    zIndex: 1500,
-                    textAlign: "center",
-                    width: windowWidth < 768 ? "90%" : "auto",  // Full width on mobile/tablet, auto on desktop
-                    maxWidth: windowWidth < 768 ? "100%" : "90%", // Adjust max-width based on screen size
-                    boxSizing: "border-box",
-                    transition: "opacity 1s ease-in-out",
-                    opacity: isFadingOut ? 0 : 1,
-                    wordWrap: "break-word",
-                    whiteSpace: "normal",
-                    lineHeight: "1.4",
-                    fontSize: "0.95rem",
+                    flexShrink: 0,
                   }}
                 >
-                  <span
-                    style={{
-                      fontWeight: "bold",
-                      whiteSpace: "normal",
-                      wordWrap: "break-word",
-                      textAlign: "center",
-                      flex: 1,
-                    }}
-                  >
-                    📍 Please turn on location services to get information for the closest stops to you!
-                  </span>
-                  <button
-                    onClick={() => setIsBannerVisible(false)}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      fontSize: "1.2rem",
-                      cursor: "pointer",
-                      marginLeft: "8px",
-                      color: "#FF3632",
-                      flexShrink: 0,
-                    }}
-                  >
-                    ×
-                  </button>
-                </div>
-              )}
+                  ×
+                </button>
+              </div>
+            )}
               <div style={{
                 overflow: "hidden",
                 maxWidth: "100vw",

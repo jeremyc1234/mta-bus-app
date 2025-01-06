@@ -3,6 +3,12 @@ import { NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 
 const MTA_API_KEY = process.env.MTA_API_KEY;
+interface StopGroup {
+  stopIds: string[];
+}
+interface ApiError extends Error {
+  message: string;
+}
 
 export async function GET(request: Request) {
   try {
@@ -58,7 +64,13 @@ export async function GET(request: Request) {
       throw new Error(`MTA API returned status ${response.status}: ${errorText}`);
     }
 
-    const data = await response.json();
+    const data = await response.json() as {
+      data: {
+        stops: Array<{ id: string; name: string }>;
+        stopGroupings?: Array<{ stopGroups: StopGroup[] }>;
+      };
+    };
+    
     console.log('🛠️ [API RESPONSE] Data:', JSON.stringify(data, null, 2));
 
     if (!data?.data?.stops) {
@@ -77,11 +89,11 @@ export async function GET(request: Request) {
 
     console.log('🛠️ [STOP GROUPS] Total Groups:', stopGroups.length);
 
-    let stopsByDirection: Record<string, string[]> = {};
+    const stopsByDirection: Record<string, string[]> = {};
 
     // Group stops by direction
     if (stopGroups.length > 0) {
-      stopGroups.forEach((group: any, index: number) => {
+      stopGroups.forEach((group: StopGroup, index: number) => {
         const direction = index.toString(); // Use index (0 or 1) as direction
         stopsByDirection[direction] = group.stopIds
           .map((id: string) => stopsMap.get(id) ?? 'Unnamed Stop')
@@ -92,7 +104,7 @@ export async function GET(request: Request) {
     console.log('🛠️ [STOPS BY DIRECTION] Processed Stops:', stopsByDirection);
 
     // Find the direction of tileStopName
-    let matchedDirection = Object.entries(stopsByDirection).find(([_, stops]) =>
+    const matchedDirection = Object.entries(stopsByDirection).find(([_dir, stops]) =>
       stops.includes(tileStopName)
     )?.[0];
 
@@ -115,10 +127,11 @@ export async function GET(request: Request) {
       tileStopFound: Boolean(matchedDirection),
       clickedStop: tileStopName
     });
-  } catch (error: any) {
-    console.error('❌ [FATAL ERROR] Failed to fetch route stops:', error.message);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('❌ [FATAL ERROR] Failed to fetch route stops:', errorMessage);
     return NextResponse.json(
-      { error: 'Failed to fetch route stops from MTA.', details: error.message },
+      { error: 'Failed to fetch route stops from MTA.', details: errorMessage },
       { status: 500 }
     );
   }

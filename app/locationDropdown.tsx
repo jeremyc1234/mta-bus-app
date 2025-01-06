@@ -4,12 +4,26 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
 interface LocationOption {
   label: string;
-  lat: number | null;
-  lon: number | null;
   secondaryLabel?: string;
+  lat: number;  // Removed null
+  lon: number;  // Removed null
 }
 
-const BUS_STOP_LOCATIONS = [
+// The LocationValue interface remains the same
+interface LocationValue {
+  lat: number;
+  lon: number;
+  label: string;
+}
+
+interface LocationSelectOption {
+  value: LocationValue;
+  label: string;
+  isCustomAddress?: boolean;
+  isAddressSearch?: boolean;
+}
+
+const BUS_STOP_LOCATIONS: LocationOption[] = [
     // Manhattan
     { label: "Union Square", secondaryLabel: "default", lat: 40.7359, lon: -73.9906 },
     { label: "Times Square", lat: 40.7580, lon: -73.9855 },
@@ -66,9 +80,6 @@ const BUS_STOP_LOCATIONS = [
     { label: "Richmond Town", lat: 40.5706, lon: -74.1455 },
 
     { label: "Roosevelt Island Tramway", lat: 40.7614, lon: -73.9493 },
-  
-    // Other
-    { label: "Other (Enter Address)", lat: null, lon: null }
   ];
   
   
@@ -93,7 +104,7 @@ const BUS_STOP_LOCATIONS = [
   }, [onLocationChange]);
 
   const [inputValue, setInputValue] = useState('');
-  const [selectedValue, setSelectedValue] = useState<any>(null);
+  const [selectedValue, setSelectedValue] = useState<LocationSelectOption | null>(null);
   const [isAddressMode, setIsAddressMode] = useState(false);
   const [addressSuggestions, setAddressSuggestions] = useState<Array<{
     value: { lat: number; lon: number; label: string };
@@ -156,11 +167,20 @@ const BUS_STOP_LOCATIONS = [
     }
   }, []);
 
-  const locationOptions = BUS_STOP_LOCATIONS.map(location => ({
-    value: location,
+  const locationOptions = BUS_STOP_LOCATIONS
+  .filter((location): location is LocationOption & { lat: number; lon: number } => 
+    location.lat !== null && location.lon !== null
+  )
+  .map((location) => ({
+    value: {
+      lat: location.lat,
+      lon: location.lon,
+      label: location.label
+    },
     label: location.label,
-    isAddressSearch: location.lat === null
+    isAddressSearch: false
   }));
+  
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -287,10 +307,12 @@ const BUS_STOP_LOCATIONS = [
     setIsAddressMode(true);
   };
 
-  const handleSelectChange = (selectedOption: any) => {
-    if (!selectedOption) return;
+  const handleSelectChange = (selectedOption: LocationSelectOption | null) => {
+    setSelectedValue(selectedOption);
     
-    if (selectedOption?.value?.lat && selectedOption?.value?.lon) {
+    if (selectedOption && selectedOption.value && 
+        typeof selectedOption.value.lat === 'number' && 
+        typeof selectedOption.value.lon === 'number') {
       setIsLocationChanging(true);
       
       setTimeout(() => {
@@ -299,7 +321,6 @@ const BUS_STOP_LOCATIONS = [
           lon: selectedOption.value.lon,
         });
         
-        // Update URL with new location
         const url = new URL(window.location.href);
         
         // Clear existing params
