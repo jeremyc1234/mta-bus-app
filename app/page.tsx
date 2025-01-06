@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState, useEffect, useMemo, useCallback, memo } from "react";
+import React, { useRef, useState, Suspense, useEffect, useMemo, useCallback, memo } from "react";
 import { BusPopupProvider, BusContent } from './busPopupProvider';
 import { Inter } from 'next/font/google';
 import Image from 'next/image';
@@ -112,7 +112,21 @@ export default function Home() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 0);
+  const [windowWidth, setWindowWidth] = useState<number | null>(null);
+
+  useEffect(() => {
+    setWindowWidth(window.innerWidth);
+    
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (windowWidth === null || Math.abs(width - windowWidth) > 50) {
+        setWindowWidth(width);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [windowWidth]);
 
   const urlLocationRef = useRef<{ lat: number | null; lon: number | null }>({ lat: null, lon: null });
   const initialLat = searchParams.get('lat');
@@ -143,19 +157,19 @@ export default function Home() {
   const [isScrollableLeft, setIsScrollableLeft] = useState(false);
   const [isScrollableRight, setIsScrollableRight] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [timestamp, setTimestamp] = useState<string | null>(null);
 
+  const [timestamp, setTimestamp] = useState(() => {
+    const initialTimestamp = searchParams.get('timestamp') || String(Date.now());
+    return initialTimestamp;
+  });
+  
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const currentTimestamp = params.get('timestamp') || Date.now().toString();
-    
-    if (!params.has('timestamp')) {
-      params.set('timestamp', currentTimestamp);
-      router.replace(`?${params.toString()}`);
+    if (!searchParams.has('timestamp')) {
+      const newParams = new URLSearchParams(searchParams.toString());
+      newParams.set('timestamp', timestamp);
+      router.replace(`${pathname}?${newParams.toString()}`);
     }
-
-    setTimestamp(currentTimestamp);
-  }, [router]);
+  }, [timestamp, searchParams, router, pathname]);
 
   const checkScrollable = () => {
     const el = scrollContainerRef.current;
@@ -397,7 +411,11 @@ useEffect(() => {
 
   const refreshInterval = 30000;
   const [timeRemaining, setTimeRemaining] = useState<number>(refreshInterval / 1000);
-  const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [isMobile, setIsMobile] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    setIsMobile(window.matchMedia("(pointer: coarse)").matches);
+  }, []);
   const lastUpdateRef = useRef<number>(Date.now());
   const [isStopLoading, setIsStopLoading] = useState<boolean>(false);
 
@@ -419,7 +437,7 @@ useEffect(() => {
     const handleResize = () => {
       // Debounce the resize event to prevent excessive re-renders
       const width = window.innerWidth;
-      if (Math.abs(width - windowWidth) > 50) { // Only update if change is significant
+      if (windowWidth === null || Math.abs(width - windowWidth) > 50) {
         setWindowWidth(width);
       }
     };
@@ -1112,6 +1130,7 @@ useEffect(() => {
 
 
   return (
+    <Suspense fallback={<div>Loading...</div>}>
     <BusPopupProvider>
       {isAlertPopupOpen && serviceAlert && (
         <ServiceAlertPopup
@@ -1142,33 +1161,33 @@ useEffect(() => {
               justifyContent: "flex-start", // Align content to the top
               gap: "8px",
             }} className={inter.className}>
-              {isBannerVisible && (
-              <div
-                style={{
-                  backgroundColor: "rgba(255, 204, 187, 0.9)",
-                  color: "#FF3632",
-                  padding: "8px 12px",
-                  borderRadius: "8px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  position: "absolute",
-                  top: "20px",
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  zIndex: 1500,
-                  textAlign: "center",
-                  width: windowWidth < 768 ? "90%" : "auto",
-                  maxWidth: windowWidth < 768 ? "100%" : "90%",
-                  boxSizing: "border-box",
-                  transition: "opacity 1s ease-in-out",
-                  opacity: isFadingOut ? 0 : 1,
-                  wordWrap: "break-word",
-                  whiteSpace: "normal",
-                  lineHeight: "1.4",
-                  fontSize: "0.95rem",
-                }}
-              >
+              {isBannerVisible && windowWidth !== null && (
+                <div
+                  style={{
+                    backgroundColor: "rgba(255, 204, 187, 0.9)",
+                    color: "#FF3632",
+                    padding: "8px 12px",
+                    borderRadius: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    position: "absolute",
+                    top: "20px",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    zIndex: 1500,
+                    textAlign: "center",
+                    width: windowWidth < 768 ? "90%" : "auto",
+                    maxWidth: windowWidth < 768 ? "100%" : "90%",
+                    boxSizing: "border-box",
+                    transition: "opacity 1s ease-in-out",
+                    opacity: isFadingOut ? 0 : 1,
+                    wordWrap: "break-word",
+                    whiteSpace: "normal",
+                    lineHeight: "1.4",
+                    fontSize: "0.95rem",
+                  }}
+                >
                 <span
   style={{
     fontWeight: "bold",
@@ -1278,7 +1297,7 @@ useEffect(() => {
     position: "relative",
   }}
 >
-                {data && finalStops.length === 0 && (
+                {windowWidth !== null && data && finalStops.length === 0 && (
                   <div style={{
                     position: 'absolute',
                     top: '50%',
@@ -1596,5 +1615,6 @@ useEffect(() => {
         )}
       </BusContent>
     </BusPopupProvider>
+    </Suspense>
   );
 }

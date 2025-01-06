@@ -55,6 +55,7 @@ const NavigationButtons: React.FC<NavigationButtonsProps> = ({ stopName }) => {
     height: '25px',
     cursor: 'pointer',
     display: 'block',
+    boxShadow: 'inherit', // Inherit the shadow from the button
   };
 
   const fallbackStyle = {
@@ -67,6 +68,14 @@ const NavigationButtons: React.FC<NavigationButtonsProps> = ({ stopName }) => {
     justifyContent: 'center',
   };
 
+  const buttonStyle = {
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.2)', // Drop shadow effect directly on the icon
+    display: 'inline-block',
+    borderRadius: '0', // Ensure no border radius
+    padding: '0', // Remove any padding
+    overflow: 'visible', // Ensure no clipping of shadow
+  };
+
   return (
     <div
       style={{
@@ -76,7 +85,13 @@ const NavigationButtons: React.FC<NavigationButtonsProps> = ({ stopName }) => {
         gap: '16px',
       }}
     >
-      <div onClick={openGoogleMaps} role="button" tabIndex={0} title="Open in Google Maps">
+      <div
+        onClick={openGoogleMaps}
+        role="button"
+        tabIndex={0}
+        title="Open in Google Maps"
+        style={buttonStyle}
+      >
         {imagesLoaded.google ? (
           <img
             src="/icons/google_maps_icon.png"
@@ -90,7 +105,13 @@ const NavigationButtons: React.FC<NavigationButtonsProps> = ({ stopName }) => {
       </div>
 
       {isIOS && (
-        <div onClick={openAppleMaps} role="button" tabIndex={0} title="Open in Apple Maps">
+        <div
+          onClick={openAppleMaps}
+          role="button"
+          tabIndex={0}
+          title="Open in Apple Maps"
+          style={buttonStyle}
+        >
           {imagesLoaded.apple ? (
             <img
               src="/icons/apple_maps_icon.png"

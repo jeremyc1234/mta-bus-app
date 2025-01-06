@@ -1,14 +1,19 @@
 // app/api/busdata/route.ts
 
 import { NextResponse } from 'next/server';
-import { Redis } from 'ioredis';
+import { Redis } from '@upstash/redis';
 
 export const runtime = 'nodejs';
 
-// Reuse Redis in dev
-declare global {
-  // eslint-disable-next-line no-var
-  var redis: Redis | undefined;
+// Initialize Redis with explicit configuration
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+});
+
+// Add error checking
+if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+  console.warn('⚠️ Upstash Redis credentials not found');
 }
 
 interface MTAStop {
@@ -20,23 +25,6 @@ interface MTAStop {
     shortName: string;
   }[];
 }
-
-interface StopVisit {
-  stopId: string;
-  arrivals: unknown[];
-}
-
-function getOrInitializeRedis() {
-  if (process.env.NODE_ENV !== 'development') {
-    return new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
-  } else {
-    if (!global.redis) {
-      global.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
-    }
-    return global.redis;
-  }
-}
-const redis = getOrInitializeRedis();
 
 const MTA_API_KEY = process.env.MTA_API_KEY;
 const CACHE_TTL = parseInt(process.env.CACHE_TTL || '30');
@@ -82,7 +70,6 @@ export async function GET(request: Request) {
       );
     }
 
-    // Convert lat/lon from strings to numbers
     const userLat = parseFloat(latParam);
     const userLon = parseFloat(lonParam);
     if (isNaN(userLat) || isNaN(userLon)) {
@@ -94,9 +81,14 @@ export async function GET(request: Request) {
 
     // Try Redis cache first
     const cacheKey = `bus-data:${userLat}:${userLon}`;
-    const cached = await redis.get(cacheKey);
-    if (cached) {
-      return NextResponse.json(JSON.parse(cached));
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        return NextResponse.json(cached);
+      }
+    } catch (error) {
+      // Log error but continue without cache
+      console.warn('Redis cache error:', error);
     }
     
     // 1) Fetch stops from MTA
@@ -116,7 +108,7 @@ export async function GET(request: Request) {
     const stopsData = await stopsRes.json();
     const stops = stopsData?.data?.stops || [] as MTAStop[];
 
-    // 2) For each stop, fetch arrivals from SIRI (up to 3 visits)
+    // 2) For each stop, fetch arrivals from SIRI
     const arrivals = await Promise.all(
       stops.map(async (stop: MTAStop) => {    
         const monitoringUrl = `http://bustime.mta.info/api/siri/stop-monitoring.json?key=${MTA_API_KEY}&MonitoringRef=${stop.id}&MaximumStopVisits=3`;
@@ -148,7 +140,7 @@ export async function GET(request: Request) {
       })
     );
 
-    // 3) Compute distance for each stop
+    // 3) Compute distances
     const computedStops = stops.map((stop: MTAStop) => {
       let distanceMiles: number | null = null;
 
@@ -163,7 +155,7 @@ export async function GET(request: Request) {
       }
 
       if (distanceMiles !== null) {
-        distanceMiles = +distanceMiles.toFixed(2); // round
+        distanceMiles = +distanceMiles.toFixed(2);
       }
 
       return {
@@ -174,13 +166,12 @@ export async function GET(request: Request) {
       };
     });
 
-    // Convert arrivals array into an object
+    // Convert arrivals array to object
     const arrivalsObj: Record<string, any[]> = {};
     arrivals.forEach((a) => {
       arrivalsObj[a.stopId] = a.arrivals;
     });
 
-    // 4) Build final JSON
     const result = {
       stops: computedStops,
       arrivals: arrivalsObj,
@@ -191,10 +182,15 @@ export async function GET(request: Request) {
       }
     };
 
-    // 5) Save in Redis cache with short TTL due to real-time nature
-    await redis.set(cacheKey, JSON.stringify(result), 'EX', CACHE_TTL);
+    // Cache the result
+    try {
+      await redis.set(cacheKey, result, {
+        ex: CACHE_TTL
+      });
+    } catch (error) {
+      console.warn('Redis cache set error:', error);
+    }
 
-    // 6) Return as JSON
     return NextResponse.json(result);
   } catch (err) {
     console.error('Bus data error:', err);
