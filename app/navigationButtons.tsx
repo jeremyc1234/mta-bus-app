@@ -37,12 +37,22 @@ const NavigationButtons: React.FC<NavigationButtonsProps> = ({ stopName }) => {
   };
 
   const buttonStyle = {
-    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.2)',
     display: 'inline-block',
     borderRadius: '0',
     padding: '0',
     overflow: 'visible',
     cursor: 'pointer',
+  };
+
+  const imageWrapperStyle = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '25px',
+    height: '25px',
+    boxShadow: '0 8px 15px rgba(0, 0, 0, 0.3)', // Shadow applied here
+    borderRadius: '8px',
+    overflow: 'hidden',
   };
 
   const fallbackStyle = {
@@ -70,13 +80,15 @@ const NavigationButtons: React.FC<NavigationButtonsProps> = ({ stopName }) => {
         title="Open in Google Maps"
         style={buttonStyle}
       >
-        <Image
-          src="/icons/google_maps_icon.png"
-          alt="Google Maps"
-          width={25}
-          height={25}
-          onError={() => setImagesLoaded((prev) => ({ ...prev, google: false }))}
-        />
+        <div style={imageWrapperStyle}>
+          <Image
+            src="/icons/google_maps_icon.png"
+            alt="Google Maps"
+            width={25}
+            height={25}
+            onError={() => setImagesLoaded((prev) => ({ ...prev, google: false }))}
+          />
+        </div>
         {!imagesLoaded.google && <span style={fallbackStyle}>🗺️</span>}
       </div>
 
@@ -88,13 +100,15 @@ const NavigationButtons: React.FC<NavigationButtonsProps> = ({ stopName }) => {
           title="Open in Apple Maps"
           style={buttonStyle}
         >
-          <Image
-            src="/icons/apple_maps_icon.png"
-            alt="Apple Maps"
-            width={25}
-            height={25}
-            onError={() => setImagesLoaded((prev) => ({ ...prev, apple: false }))}
-          />
+          <div style={imageWrapperStyle}>
+            <Image
+              src="/icons/apple_maps_icon.png"
+              alt="Apple Maps"
+              width={25}
+              height={25}
+              onError={() => setImagesLoaded((prev) => ({ ...prev, apple: false }))}
+            />
+          </div>
           {!imagesLoaded.apple && <span style={fallbackStyle}>🗺️</span>}
         </div>
       )}
