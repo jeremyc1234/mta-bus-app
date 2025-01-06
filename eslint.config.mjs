@@ -9,17 +9,20 @@ const compat = new FlatCompat({
   baseDirectory: __dirname,
 });
 
-// Merge older extends with modern flat configuration
-const legacyExtends = compat.extends("next/core-web-vitals", "next/typescript");
-
-export default {
+// Convert legacy configs using FlatCompat
+const legacyConfigs = compat.config({
   extends: [
-    ...legacyExtends,
     'next',
     'next/core-web-vitals',
     'plugin:@typescript-eslint/recommended'
-  ],
-  rules: {
-    '@typescript-eslint/no-explicit-any': 'off'
+  ]
+});
+
+export default [
+  ...legacyConfigs,
+  {
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off'
+    }
   }
-};
+];
