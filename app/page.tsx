@@ -876,13 +876,13 @@ useEffect(() => {
       // Start fade-out animation at 10 seconds
       const fadeTimer = setTimeout(() => {
         setIsFadingOut(true);
-      }, 15000);
+      }, 10000);
 
       // Fully hide the banner at 15 seconds
       const hideTimer = setTimeout(() => {
         setIsBannerVisible(false);
         setIsFadingOut(false); // Reset fade-out state
-      }, 11000);
+      }, 12000);
 
       return () => {
         clearTimeout(fadeTimer);
@@ -1540,13 +1540,19 @@ useEffect(() => {
       </div>
 
 
-                      <h2 style={{ fontSize: "1.3rem", fontWeight: "bold" }}>
-                        <span style={{ fontSize: "1.8rem" }}>🚏</span>
-                        {stop.stopName}{" "}
-                        {stop.distance != null
-                          ? `(${stop.distance} miles away)`
-                          : "(distance unknown)"}
-                      </h2>
+      <h2 style={{
+  fontSize: "1.3rem",
+  fontWeight: "bold",
+  margin: "0", // Reset any margin
+  padding: "8px", // Ensure padding is consistent
+}}>
+  <span style={{ fontSize: "1.8rem" }}>🚏</span>
+  {stop.stopName}{" "}
+  {stop.distance != null
+    ? `(${stop.distance} miles away)`
+    : "(distance unknown)"}
+</h2>
+
                       <div style={{
                       display: 'flex',
                       flexDirection: 'column',
