@@ -90,6 +90,7 @@ export default function Header() {
   };
 
   return (
+    <Suspense fallback={<div>Loading Header...</div>}>
     <header
       style={{
         width: "100%",
@@ -334,6 +335,6 @@ export default function Header() {
   </div>
 )}
     </header>
-    
+    </Suspense>
   );
 }

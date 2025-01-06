@@ -44,16 +44,12 @@ export async function GET(request: Request) {
     const apiUrl = `http://bustime.mta.info/api/where/stops-for-route/${routePrefix}_${encodedRouteId}.json?key=${MTA_API_KEY}&includePolylines=false`;
 
 
-    console.log('🚀 [API CALL] Fetching stops from URL:', apiUrl);
-
     const response = await fetch(apiUrl, {
       headers: {
         'Accept': 'application/json',
         'User-Agent': 'MTABusTracker/1.0'
       }
     });
-
-    console.log('🛠️ [API RESPONSE] Status Code:', response.status);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -67,8 +63,7 @@ export async function GET(request: Request) {
         stopGroupings?: Array<{ stopGroups: StopGroup[] }>;
       };
     };
-    
-    console.log('🛠️ [API RESPONSE] Data:', JSON.stringify(data, null, 2));
+
 
     if (!data?.data?.stops) {
       console.error('❌ [RESPONSE ERROR] Invalid response structure from MTA API.');
@@ -79,12 +74,9 @@ export async function GET(request: Request) {
     const stopsMap = new Map(
       data.data.stops.map((stop: any) => [stop.id, stop.name])
     );
-    console.log('🗺️ [STOP MAP] Generated Stops Map:', stopsMap);
 
     const stopGroupings = data.data.stopGroupings?.[0];
     const stopGroups = stopGroupings?.stopGroups || [];
-
-    console.log('🛠️ [STOP GROUPS] Total Groups:', stopGroups.length);
 
     const stopsByDirection: Record<string, string[]> = {};
 
@@ -101,7 +93,7 @@ export async function GET(request: Request) {
     console.log('🛠️ [STOPS BY DIRECTION] Processed Stops:', stopsByDirection);
 
     // Find the direction of tileStopName
-    const matchedDirection = Object.entries(stopsByDirection).find(([stops]) =>
+    const matchedDirection = Object.entries(stopsByDirection).find(([_dir, stops]) =>
       stops.includes(tileStopName)
     )?.[0];
 

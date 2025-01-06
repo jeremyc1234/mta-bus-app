@@ -7,8 +7,6 @@ import Image from 'next/image';
 import ServiceAlertPopup from './serviceAlertPopup'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import NavigationButtons from './navigationButtons';
-import { normalizeStopName, mergeStops } from './stopProcessing';
-import type { BusStop, BusData, BusArrival, MergedBusStop } from './stopProcessing';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -70,7 +68,6 @@ const BUS_STOP_LOCATIONS = [
 
   { label: "Roosevelt Island Tramway", lat: 40.7614, lon: -73.9493 },
 ];
-
 
 const isWithinNYC = (lat: number, lon: number) => {
   // NYC bounds (approximate)
@@ -165,7 +162,14 @@ export default function Home() {
     const initialTimestamp = searchParams.get('timestamp') || String(Date.now());
     return initialTimestamp;
   });
-
+  
+  const normalizeStopName = (name: string) => {
+    return name
+      .toUpperCase()         // Ensure uniform casing
+      .replace(/\s*\/\s*/g, ' / ') // Standardize spacing around slashes
+      .replace(/\s+/g, ' ')  // Collapse multiple spaces into one
+      .trim();              // Remove leading/trailing spaces
+  };
   useEffect(() => {
     if (!searchParams.has('timestamp')) {
       const newParams = new URLSearchParams(searchParams.toString());
@@ -708,7 +712,7 @@ useEffect(() => {
         </div>
       ));
     }, [stops, highlightedStop, userLocation, currentStop]);
-BusRoutePopup.displayName = 'BusRoutePopup';
+
     const handleOverlayClick = useCallback((e: React.MouseEvent) => {
       if (e.target === e.currentTarget) {
         onClose();
@@ -808,16 +812,15 @@ BusRoutePopup.displayName = 'BusRoutePopup';
                     transform: 'translateY(-50%)',
                   }}
                 >
-                  <Image
-                  src={busIcon}
-                  alt={isGoingUp ? 'Bus going up' : 'Bus going down'}
-                  width={45}
-                  height={135}
-                  style={{
-                    objectFit: 'contain',
-                  }}
-                  priority
-                />
+                  <img
+                    src={busIcon}
+                    alt={isGoingUp ? 'Bus going up' : 'Bus going down'}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain',
+                    }}
+                  />
                 </div>
               </div>
 
@@ -1040,8 +1043,14 @@ BusRoutePopup.displayName = 'BusRoutePopup';
     );
   }
 
-  let stopsSorted = mergeStops(data.stops || [], data);
-stopsSorted = stopsSorted.slice(0, 5);
+
+  let stopsSorted = [...(data.stops || [])].sort((a, b) => {
+    const distA = a.distance ?? 99999;
+    const distB = b.distance ?? 99999;
+    return distA - distB;
+  });
+
+  stopsSorted = stopsSorted.slice(0, 5);
 
   const stopsWithArrivals: any[] = [];
   const stopsNoArrivals: any[] = [];
@@ -1053,7 +1062,7 @@ stopsSorted = stopsSorted.slice(0, 5);
       stopsNoArrivals.push(stop);
     }
   }
-  const finalStops = stopsSorted;
+  const finalStops = [...stopsWithArrivals, ...stopsNoArrivals];
 
   const fetchRouteStops = async (routeId: string, tileStopName: string) => {
     try {
@@ -1077,45 +1086,36 @@ stopsSorted = stopsSorted.slice(0, 5);
   };
 
   function getStopArrivals(stopId: string) {
-    // Handle multiple stop IDs (for merged stops)
-    const stopIds = stopId.split(',');
-    const visits: any[] = [];
-    
-    // Collect arrivals from all related stop IDs
-    stopIds.forEach(id => {
-      const stopArrivals = data.arrivals?.[id] || [];
-      visits.push(...stopArrivals);
-    });
-  
+    const visits = data.arrivals?.[stopId] || [];
     const routeDirectionMap: Record<string, Record<string, any[]>> = {};
-  
+
     visits.forEach((visit: any) => {
       const mvj = visit.MonitoredVehicleJourney;
       if (!mvj) return;
-  
+
       let route = "Unknown Route";
       if (mvj.LineRef) {
         route = mvj.LineRef.replace("MTA NYCT_", "")
           .replace("MTABC_", "");
       }
-  
+
       const destination = mvj.DestinationName || "Unknown Destination";
       const directionKey = `to ${destination}`;
-  
+
       if (!routeDirectionMap[route]) {
         routeDirectionMap[route] = {};
       }
       if (!routeDirectionMap[route][directionKey]) {
         routeDirectionMap[route][directionKey] = [];
       }
-  
+
       const vehicleRef = mvj?.VehicleRef?.replace(/^\D+/, '') || 'Unknown VehicleRef';
       routeDirectionMap[route][directionKey].push({
         ...visit,
         vehicleRef
       });
     });
-  
+
     return routeDirectionMap;
   }
 
@@ -1360,8 +1360,9 @@ stopsSorted = stopsSorted.slice(0, 5);
                 )}
                 
                 {finalStops.map((stop: any) => {
+                  const arrivalsArray = data.arrivals?.[stop.stopId] || [];
+                  const hasBuses = arrivalsArray.length > 0;
                   const routeMap = getStopArrivals(stop.stopId);
-                  const hasBuses = Object.keys(routeMap).length > 0;
                   const hasMultipleRoutes = Object.keys(routeMap).length > 1;
 
                   return (
