@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FaBars } from "react-icons/fa";
 import { usePathname } from "next/navigation"; // Import usePathname
 import HeaderSection from './headerSection';
+import Image from 'next/image';
 
 const TABLET_BREAKPOINT = 768;
 
@@ -13,18 +14,14 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [windowWidth, setWindowWidth] = useState(0);
   const [selectedStop, setSelectedStop] = useState<string | null>(null);
-  const [locationServicesEnabled, setLocationServicesEnabled] = useState<boolean>(false); // ✅ Added state
   const pathname = usePathname();
   const [isLocationChanging, setIsLocationChanging] = useState(false);
 
   const preserveUrlParams = (currentPath: string) => {
     if (typeof window === 'undefined') return currentPath;
     const url = new URL(window.location.href);
-    const params = url.searchParams.toString();
-    return params ? `${currentPath}?${params}` : currentPath;
+    return `${currentPath}?${url.searchParams.toString()}`;
   };
-  
-
 
   const handleLocationChange = async (newLocation: { lat: number | null; lon: number | null }) => {
     if (newLocation.lat && newLocation.lon) {
@@ -132,7 +129,7 @@ export default function Header() {
         {/* Logo with conditional styling */}
         <Link 
           href={preserveUrlParams('/')}
-          onClick={(e) => {
+          onClick={() => {
             handleHomeClick();
             // Don't prevent default - let the preserveUrlParams work
           }}
@@ -153,12 +150,13 @@ export default function Header() {
                 })
           }}
         >
-          <img
+          <Image
             src="/icons/logo.png"
             alt="Logo"
+            width={180} // Set appropriate width
+            height={60} // Set appropriate height
+            priority // Ensures the logo is preloaded for better performance
             style={{
-              height: "60px",
-              width: "auto",
               objectFit: "contain",
             }}
           />

@@ -3,7 +3,7 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback, memo } from "react";
 import { BusPopupProvider, BusContent } from './busPopupProvider';
 import { Inter } from 'next/font/google';
-
+import Image from 'next/image';
 import ServiceAlertPopup from './serviceAlertPopup'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import NavigationButtons from './navigationButtons';
@@ -521,12 +521,14 @@ useEffect(() => {
           animation: "busDrive 1s infinite cubic-bezier(0.4, 0, 0.2, 1)"
         }}
       >
-        <img
+        
+        <Image
           src="/icons/bus_icon.png"
           alt="Bus Icon"
+          width={120} // Explicit width
+          height={60} // Set an appropriate height based on your design
+          priority // Optional: Preloads if it's above the fold
           style={{
-            width: "120px",
-            height: "auto",
             objectFit: "contain",
           }}
         />

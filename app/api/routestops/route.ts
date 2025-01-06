@@ -127,11 +127,10 @@ export async function GET(request: Request) {
       tileStopFound: Boolean(matchedDirection),
       clickedStop: tileStopName
     });
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('❌ [FATAL ERROR] Failed to fetch route stops:', errorMessage);
+  } catch (error: any) {
+    console.error('❌ [FATAL ERROR] Failed to fetch route stops:', error.message);
     return NextResponse.json(
-      { error: 'Failed to fetch route stops from MTA.', details: errorMessage },
+      { error: 'Failed to fetch route stops from MTA.', details: error.message },
       { status: 500 }
     );
   }
