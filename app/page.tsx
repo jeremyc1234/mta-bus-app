@@ -1130,7 +1130,44 @@ useEffect(() => {
 
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        flexDirection: 'column',
+        gap: '20px'
+      }}>
+        <Image
+          src="/icons/bus_icon.png"
+          alt="Loading..."
+          width={120}
+          height={60}
+          priority
+          style={{
+            animation: "busDrive 1s infinite cubic-bezier(0.4, 0, 0.2, 1)"
+          }}
+        />
+        <style jsx global>{`
+          @keyframes busDrive {
+            0% {
+              transform: translateY(0);
+              opacity: 1;
+            }
+            50% {
+              transform: translateY(-15px);
+              opacity: 0.9;
+            }
+            100% {
+              transform: translateY(0);
+              opacity: 1;
+            }
+          }
+        `}</style>
+        <p>Loading bus data...</p>
+      </div>
+    }>
     <BusPopupProvider>
       {isAlertPopupOpen && serviceAlert && (
         <ServiceAlertPopup
