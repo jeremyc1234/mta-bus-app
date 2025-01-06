@@ -1494,7 +1494,7 @@ useEffect(() => {
         marginBottom: '8px' 
       }}>
         {/* LEFT ARROW (Hidden on First Tile) */}
-        {index > 0 && (
+        {isMobile && index > 0 && (
           <button
             onClick={() => {
               if (scrollContainerRef.current) {
@@ -1515,7 +1515,7 @@ useEffect(() => {
         )}
 
         {/* RIGHT ARROW (Hidden on Last Tile) */}
-        {index < finalStops.length - 1 && (
+        {isMobile && index < finalStops.length - 1 && (
           <button
             onClick={() => {
               if (scrollContainerRef.current) {
