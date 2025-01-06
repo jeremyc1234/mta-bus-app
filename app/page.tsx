@@ -846,6 +846,8 @@ useEffect(() => {
       prevProps.stops.every((stop, index) => stop === nextProps.stops[index]);
     return areEqual;
   });
+  
+  BusRoutePopup.displayName = 'BusRoutePopup';
 
   useEffect(() => {
     if (sessionStorage.getItem("visitedFromHeader")) {
@@ -1667,8 +1669,6 @@ useEffect(() => {
     </Suspense>
   );
 }
-HomeContent.displayName = 'HomeContent';
-
 const Home = () => {
   return (
     <Suspense fallback={<div>Loading Home...</div>}>
@@ -1676,5 +1676,7 @@ const Home = () => {
     </Suspense>
   );
 };
+HomeContent.displayName = 'HomeContent';
+Home.displayName = 'Home';
 
 export default Home;
