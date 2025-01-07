@@ -251,52 +251,45 @@ interface LocationSelectOption {
   const handleSelectChange = (selectedOption: LocationSelectOption | null) => {
     setSelectedValue(selectedOption);
     
-    if (selectedOption && selectedOption.value && 
+    if (selectedOption?.value && 
         typeof selectedOption.value.lat === 'number' && 
         typeof selectedOption.value.lon === 'number') {
       setIsLocationChanging(true);
       
-      setTimeout(() => {
-        onLocationChangeRef.current({
+      // Remove the setTimeout and call immediately
+      onLocationChangeRef.current({
+        lat: selectedOption.value.lat,
+        lon: selectedOption.value.lon,
+      });
+      
+      // Update URL
+      const url = new URL(window.location.href);
+      url.searchParams.delete('lat');
+      url.searchParams.delete('lon');
+      url.searchParams.delete('address');
+      url.searchParams.delete('location');
+      
+      if (selectedOption.isCustomAddress) {
+        url.searchParams.set('lat', selectedOption.value.lat.toString());
+        url.searchParams.set('lon', selectedOption.value.lon.toString());
+        url.searchParams.set('address', selectedOption.value.label);
+      } else {
+        url.searchParams.set('location', selectedOption.value.label);
+        url.searchParams.set('lat', selectedOption.value.lat.toString());
+        url.searchParams.set('lon', selectedOption.value.lon.toString());
+      }
+      
+      window.history.pushState(
+        { 
           lat: selectedOption.value.lat,
           lon: selectedOption.value.lon,
-        });
-        
-        const url = new URL(window.location.href);
-        
-        // Clear existing params
-        url.searchParams.delete('lat');
-        url.searchParams.delete('lon');
-        url.searchParams.delete('address');
-        url.searchParams.delete('location');
-        
-        // Add new params
-        if (selectedOption.isCustomAddress) {
-          url.searchParams.set('lat', selectedOption.value.lat.toString());
-          url.searchParams.set('lon', selectedOption.value.lon.toString());
-          url.searchParams.set('address', selectedOption.value.label);
-        } else {
-          url.searchParams.set('location', selectedOption.value.label);
-          url.searchParams.set('lat', selectedOption.value.lat.toString());
-          url.searchParams.set('lon', selectedOption.value.lon.toString());
-        }
-        
-        // Only use timestamp for state, not URL
-        const timestamp = Date.now();
-        
-        // Use pushState to create a new history entry
-        window.history.pushState(
-          { 
-            lat: selectedOption.value.lat,
-            lon: selectedOption.value.lon,
-            type: selectedOption.isCustomAddress ? 'address' : 'location',
-            label: selectedOption.value.label,
-            timestamp
-          }, 
-          '', 
-          url.toString()
-        );
-      }, 100);
+          type: selectedOption.isCustomAddress ? 'address' : 'location',
+          label: selectedOption.value.label,
+          timestamp: Date.now()
+        }, 
+        '', 
+        url.toString()
+      );
     }
   };
   
