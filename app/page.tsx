@@ -254,10 +254,9 @@ const HomeContent = () => {
     const lat = searchParams.get('lat');
     const lon = searchParams.get('lon');
   
-    // If we have location parameters in the URL
+    // If we have location parameters in the URL, always respect them
     if (locationLabel || (lat && lon)) {
       if (locationLabel) {
-        // Handle predefined location
         const predefinedLocation = BUS_STOP_LOCATIONS.find(
           (loc) => loc.label.toLowerCase() === locationLabel.toLowerCase()
         );
@@ -272,7 +271,6 @@ const HomeContent = () => {
           return;
         }
       } else if (lat && lon && addressParam) {
-        // Handle custom address
         setLocation({
           lat: parseFloat(lat),
           lon: parseFloat(lon)
@@ -283,8 +281,8 @@ const HomeContent = () => {
       }
     }
 
-    // No location in URL - check for geolocation
-    if (!locationLocked && "geolocation" in navigator) {
+    // Only check geolocation if this is the initial load (no location locked)
+    if (!locationLocked && !searchParams.has('location') && !searchParams.has('lat') && "geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const newLat = position.coords.latitude;
@@ -309,7 +307,6 @@ const HomeContent = () => {
             );
           } else {
             console.log('📍 Location outside NYC detected:', { newLat, newLon });
-            // Get address from coordinates
             const address = await getAddressFromCoords(newLat, newLon);
             console.log('📍 Geocoding result:', address);
             setUserLocation(address || "Unknown location");
@@ -317,9 +314,38 @@ const HomeContent = () => {
             
             setLocationServicesEnabled(true);
             setIsOutsideNYC(true);
-            // setIsBannerVisible(true);
-            // Set Union Square as default with proper URL parameters
-            const defaultLocation = BUS_STOP_LOCATIONS[0]; // Union Square
+
+            // Only set default location if there's no existing location
+            if (!location.lat || !location.lon) {
+              const defaultLocation = BUS_STOP_LOCATIONS[0];
+              if (defaultLocation.lat !== null && defaultLocation.lon !== null) {
+                setLocation({ 
+                  lat: defaultLocation.lat, 
+                  lon: defaultLocation.lon 
+                });
+                const url = new URL(window.location.href);
+                url.searchParams.set('location', defaultLocation.label);
+                url.searchParams.set('lat', defaultLocation.lat.toString());
+                url.searchParams.set('lon', defaultLocation.lon.toString());
+                window.history.replaceState(
+                  { 
+                    lat: defaultLocation.lat, 
+                    lon: defaultLocation.lon,
+                    type: 'location',
+                    label: defaultLocation.label
+                  },
+                  '',
+                  url.toString()
+                );
+              }
+            }
+          }
+        },
+        (error) => {
+          setLocationServicesEnabled(false);
+          // Only set default location if there's no existing location
+          if (!location.lat || !location.lon) {
+            const defaultLocation = BUS_STOP_LOCATIONS[0];
             if (defaultLocation.lat !== null && defaultLocation.lon !== null) {
               setLocation({ 
                 lat: defaultLocation.lat, 
@@ -341,36 +367,11 @@ const HomeContent = () => {
               );
             }
           }
-        },
-        (error) => {
-          setLocationServicesEnabled(false);
-          // Set Union Square as default with proper URL parameters
-          const defaultLocation = BUS_STOP_LOCATIONS[0]; // Union Square
-          if (defaultLocation.lat !== null && defaultLocation.lon !== null) {
-            setLocation({ 
-              lat: defaultLocation.lat, 
-              lon: defaultLocation.lon 
-            });
-            const url = new URL(window.location.href);
-            url.searchParams.set('location', defaultLocation.label);
-            url.searchParams.set('lat', defaultLocation.lat.toString());
-            url.searchParams.set('lon', defaultLocation.lon.toString());
-            window.history.replaceState(
-              { 
-                lat: defaultLocation.lat, 
-                lon: defaultLocation.lon,
-                type: 'location',
-                label: defaultLocation.label
-              },
-              '',
-              url.toString()
-            );
-          }
         }
       );
-    } else if (!locationLocked) {
-      // Set Union Square as default with proper URL parameters
-      const defaultLocation = BUS_STOP_LOCATIONS[0]; // Union Square
+    } else if (!locationLocked && !location.lat && !location.lon) {
+      // Only set default location if there's no existing location
+      const defaultLocation = BUS_STOP_LOCATIONS[0];
       if (defaultLocation.lat !== null && defaultLocation.lon !== null) {
         setLocation({ 
           lat: defaultLocation.lat, 
