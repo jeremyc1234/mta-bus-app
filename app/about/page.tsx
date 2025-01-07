@@ -173,6 +173,23 @@ export default function About() {
               </span>
             ),
           },
+          {
+            question: "Is this website operated by the New York City MTA (Metropolitan Transportation Authority)?",
+            answer: (
+              <span>
+                While we use MTA&apos;s Bus Time API, we are not directly affiliated with the MTA. If you would like to contact the MTA please go to the {" "}
+                <a
+                  href="https://new.mta.info/schedules"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: "#0078D7", textDecoration: "underline" }}
+                >
+                  MTA website
+                </a>
+                .
+              </span>
+            ),
+          },
         ].map((faq, index) => (
           <div
             key={index}
@@ -183,23 +200,34 @@ export default function About() {
             }}
           >
             <button
-              onClick={() => toggleFAQ(index)}
-              style={{
-                width: "100%",
-                textAlign: "left",
-                padding: "1rem",
-                backgroundColor: "#f5f5f5",
-                border: "none",
-                cursor: "pointer",
-                fontSize: "1.1rem",
-                fontWeight: "bold",
-                outline: "none",
-              }}
-            >
+  onClick={() => toggleFAQ(index)}
+  style={{
+    width: "100%",
+    textAlign: "left",
+    padding: "1rem",
+    backgroundColor: "#f5f5f5",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "1.1rem",
+    fontWeight: "bold",
+    outline: "none",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "1rem",
+    textWrap: "wrap",
+    wordBreak: "break-word",
+  }}
+>
               {faq.question}
-              <span style={{ float: "right" }}>
-                {faqOpen[index] ? "▲" : "▼"}
-              </span>
+              <span
+            style={{
+              transform: faqOpen[index] ? "rotate(180deg)" : "rotate(0)",
+              transition: "transform 0.3s ease",
+            }}
+          >
+            🔽
+          </span>
             </button>
             <div
               ref={(el) => {
@@ -221,6 +249,27 @@ export default function About() {
         ))}
       </div>
       <div
+        style={{
+          textAlign: "center",
+          fontSize: "1.1rem",
+          padding: "20px",
+        }}
+      >
+        <p style={{ marginBottom: "10px" }}>
+          <strong>What&apos;s on your mind? We'd love to hear your feedback!</strong>
+        </p>
+        <a
+          href="/feedback"
+          style={{
+            textDecoration: "none",
+            color: "#0078D7",
+            fontWeight: "bold",
+          }}
+        >
+          Share Your Feedback
+        </a>
+      </div>
+      <div
       style={{
         textAlign: "center",
         fontSize: "0.9rem",
@@ -232,6 +281,7 @@ export default function About() {
     >
       <p>We are not affiliated with the MTA.</p>
     </div>
+
     </main>
     
   );

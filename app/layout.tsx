@@ -5,6 +5,7 @@ import Script from 'next/script';
 import { Inter } from 'next/font/google';
 import Header from './header';
 import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 
 const inter = Inter({ subsets: ['latin'] });
 const GTM_ID = 'GTM-MLQ6ZJX7';
@@ -70,13 +71,45 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     backgroundColor: '#f1f1f1',
     fontSize: '0.9rem',
     width: '100%',
-    maxWidth: '100vw',
-    boxSizing: 'border-box',
     marginTop: 'auto',
     zIndex: '1100',
-    overflowX: 'hidden'
+    overflowX: 'hidden',
   }}
 >
+  <nav style={{
+    display: 'flex',
+    justifyContent: 'center',
+    gap: '1rem',
+    marginBottom: '10px'
+  }}>
+    <Link 
+      href="/" 
+      style={{
+        textDecoration: 'none',
+        color: 'grey',
+      }}
+    >
+      Home
+    </Link>
+    <Link 
+      href="/schedules" 
+      style={{
+        textDecoration: 'none',
+        color: 'grey',
+      }}
+    >
+      Schedules
+    </Link>
+    <Link 
+      href="/about" 
+      style={{
+        textDecoration: 'none',
+        color: 'grey',
+      }}
+    >
+      About
+    </Link>
+  </nav>
   Made with ❤️ using Next.js and MTA API
 </footer>
      </body>

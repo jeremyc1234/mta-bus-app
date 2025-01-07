@@ -158,7 +158,7 @@ export default function Header() {
           <Image
             src="/icons/logo.png"
             alt="Logo"
-            width={160} // Set appropriate width
+            width={140} // Set appropriate width
             height={60} // Set appropriate height
             priority // Ensures the logo is preloaded for better performance
             style={{
@@ -215,18 +215,6 @@ export default function Header() {
               }}
             >
               About
-            </Link>
-            <Link 
-              href={pathname === '/feedback' ? '/feedback' : preserveUrlParams('/feedback')}
-              style={{
-                textDecoration: 'none',
-                color: 'inherit',
-                fontSize: '1.3rem',
-                fontWeight: '500',
-                padding: '0.5rem 1rem',
-              }}
-            >
-              Feedback
             </Link>
           </nav>
         )}
@@ -306,19 +294,6 @@ export default function Header() {
   }}
 >
   About
-</Link>
-<Link 
-  href={pathname === '/feedback' ? '/feedback' : preserveUrlParams('/feedback')}
-  onClick={() => setIsMenuOpen(false)}
-  style={{
-    padding: '10px 0',
-    borderBottom: '1px solid #eee',
-    textDecoration: 'none',
-    color: 'inherit',
-    fontSize: '1.1rem',
-  }}
->
-  Feedback
 </Link>
 </nav>
           </>
