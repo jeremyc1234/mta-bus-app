@@ -38,6 +38,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
            `,
          }}
        />
+       <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9527056951697290"
+     crossOrigin="anonymous"></script>
      </head>
      <body className={inter.className} style={{ overflowX: 'hidden' }}>
        <noscript>
