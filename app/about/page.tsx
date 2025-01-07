@@ -256,7 +256,7 @@ export default function About() {
         }}
       >
         <p style={{ marginBottom: "10px" }}>
-          <strong>What&apos;s on your mind? We'd love to hear your feedback!</strong>
+          <strong>What&apos;s on your mind? We&apos;d love to hear your feedback!</strong>
         </p>
         <a
           href="/feedback"
