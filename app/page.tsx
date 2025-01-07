@@ -240,7 +240,46 @@ const HomeContent = () => {
       return false;
     }
   };
-
+  const setDefaultLocation = () => {
+    const defaultLocation = BUS_STOP_LOCATIONS[0];
+    if (defaultLocation.lat !== null && defaultLocation.lon !== null) {
+      setLocation({ 
+        lat: defaultLocation.lat, 
+        lon: defaultLocation.lon 
+      });
+      setSelectedStop(defaultLocation.label);
+      
+      // Update URL without triggering a page reload
+      const url = new URL(window.location.href);
+      url.searchParams.set('location', defaultLocation.label);
+      url.searchParams.set('lat', defaultLocation.lat.toString());
+      url.searchParams.set('lon', defaultLocation.lon.toString());
+      window.history.replaceState(
+        { 
+          lat: defaultLocation.lat, 
+          lon: defaultLocation.lon,
+          type: 'location',
+          label: defaultLocation.label
+        },
+        '',
+        url.toString()
+      );
+    }
+  };
+  
+  const handleOutsideNYC = async (lat: number, lon: number) => {
+    const address = await getAddressFromCoords(lat, lon);
+    setUserLocation(address || "Unknown location");
+    setLocationServicesEnabled(true);
+    setIsOutsideNYC(true);
+    setDefaultLocation();
+  };
+  
+  const handleLocationError = () => {
+    setLocationServicesEnabled(false);
+    setDefaultLocation();
+  };
+  
 
   useEffect(() => {
     if (location.lat && location.lon) {
@@ -254,7 +293,7 @@ const HomeContent = () => {
     const lat = searchParams.get('lat');
     const lon = searchParams.get('lon');
   
-    // If we have location parameters in the URL, always respect them
+    // If URL has location parameters, use them
     if (locationLabel || (lat && lon)) {
       if (locationLabel) {
         const predefinedLocation = BUS_STOP_LOCATIONS.find(
@@ -280,8 +319,8 @@ const HomeContent = () => {
         return;
       }
     }
-
-    // Only check geolocation if this is the initial load (no location locked)
+  
+    // If no location is specified and geolocation is available
     if (!locationLocked && !searchParams.has('location') && !searchParams.has('lat') && "geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
@@ -289,111 +328,21 @@ const HomeContent = () => {
           const newLon = position.coords.longitude;
           
           if (isWithinNYC(newLat, newLon)) {
-            const newLocation = {
-              lat: newLat,
-              lon: newLon
-            };
-            setLocation(newLocation);
+            setLocation({ lat: newLat, lon: newLon });
             setLocationServicesEnabled(true);
             setIsOutsideNYC(false);
-            
-            // Update URL with geolocation
-            const url = new URL(window.location.href);
-            url.searchParams.set('timestamp', Date.now().toString());
-            window.history.replaceState(
-              { ...location, timestamp: Date.now() },
-              document.title,
-              url.toString()
-            );
           } else {
-            console.log('📍 Location outside NYC detected:', { newLat, newLon });
-            const address = await getAddressFromCoords(newLat, newLon);
-            console.log('📍 Geocoding result:', address);
-            setUserLocation(address || "Unknown location");
-            console.log('📍 UserLocation state updated to:', address || "Unknown location");
-            
-            setLocationServicesEnabled(true);
-            setIsOutsideNYC(true);
-
-            // Only set default location if there's no existing location
-            if (!location.lat || !location.lon) {
-              const defaultLocation = BUS_STOP_LOCATIONS[0];
-              if (defaultLocation.lat !== null && defaultLocation.lon !== null) {
-                setLocation({ 
-                  lat: defaultLocation.lat, 
-                  lon: defaultLocation.lon 
-                });
-                const url = new URL(window.location.href);
-                url.searchParams.set('location', defaultLocation.label);
-                url.searchParams.set('lat', defaultLocation.lat.toString());
-                url.searchParams.set('lon', defaultLocation.lon.toString());
-                window.history.replaceState(
-                  { 
-                    lat: defaultLocation.lat, 
-                    lon: defaultLocation.lon,
-                    type: 'location',
-                    label: defaultLocation.label
-                  },
-                  '',
-                  url.toString()
-                );
-              }
-            }
+            handleOutsideNYC(newLat, newLon);
           }
         },
         (error) => {
-          setLocationServicesEnabled(false);
-          // Only set default location if there's no existing location
-          if (!location.lat || !location.lon) {
-            const defaultLocation = BUS_STOP_LOCATIONS[0];
-            if (defaultLocation.lat !== null && defaultLocation.lon !== null) {
-              setLocation({ 
-                lat: defaultLocation.lat, 
-                lon: defaultLocation.lon 
-              });
-              const url = new URL(window.location.href);
-              url.searchParams.set('location', defaultLocation.label);
-              url.searchParams.set('lat', defaultLocation.lat.toString());
-              url.searchParams.set('lon', defaultLocation.lon.toString());
-              window.history.replaceState(
-                { 
-                  lat: defaultLocation.lat, 
-                  lon: defaultLocation.lon,
-                  type: 'location',
-                  label: defaultLocation.label
-                },
-                '',
-                url.toString()
-              );
-            }
-          }
+          handleLocationError();
         }
       );
-    } else if (!locationLocked && !location.lat && !location.lon) {
-      // Only set default location if there's no existing location
-      const defaultLocation = BUS_STOP_LOCATIONS[0];
-      if (defaultLocation.lat !== null && defaultLocation.lon !== null) {
-        setLocation({ 
-          lat: defaultLocation.lat, 
-          lon: defaultLocation.lon 
-        });
-        const url = new URL(window.location.href);
-        url.searchParams.set('location', defaultLocation.label);
-        url.searchParams.set('lat', defaultLocation.lat.toString());
-        url.searchParams.set('lon', defaultLocation.lon.toString());
-        window.history.replaceState(
-          { 
-            lat: defaultLocation.lat, 
-            lon: defaultLocation.lon,
-            type: 'location',
-            label: defaultLocation.label
-          },
-          '',
-          url.toString()
-        );
-      }
+    } else if (!location.lat || !location.lon) {
+      setDefaultLocation();
     }
-}, [searchParams, locationLocked]);
+  }, [searchParams, locationLocked]);
 
 useEffect(() => {
   const handlePopState = (event: PopStateEvent) => {
