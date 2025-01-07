@@ -146,6 +146,7 @@ const HomeContent = () => {
     lat: !isNaN(defaultLat) ? defaultLat : FALLBACK_LAT,
     lon: !isNaN(defaultLon) ? defaultLon : FALLBACK_LON,
   });
+  const [userLocation, setUserLocation] = useState<string>("");
 
   const [isOutsideNYC, setIsOutsideNYC] = useState<boolean>(false);
 
@@ -160,7 +161,56 @@ const HomeContent = () => {
 
   const [timestamp, setTimestamp] = useState(() => String(Date.now()));
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
+
+  const getAddressFromCoords = async (lat: number, lon: number) => {
+    console.log('🌍 Starting geocoding for coordinates:', { lat, lon });
+    try {
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
+      console.log('🔑 API Key present:', !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
+      
+      const response = await fetch(url);
+      console.log('📡 Geocoding API response status:', response.status);
+      
+      const data = await response.json();
+      console.log('📍 Geocoding API response:', data);
   
+      if (data.status === 'REQUEST_DENIED') {
+        console.error('❌ API Request Denied:', data.error_message);
+        return null;
+      }
+  
+      if (data.status !== 'OK') {
+        console.error('❌ API Error Status:', data.status);
+        return null;
+      }
+  
+      if (data.results && data.results[0]) {
+        const addressComponents = data.results[0].address_components;
+        let city = '', state = '';
+        
+        // Find city and state from address components
+        for (const component of addressComponents) {
+          if (component.types.includes('locality')) {
+            city = component.long_name;
+          }
+          if (component.types.includes('administrative_area_level_1')) {
+            state = component.short_name; // Using short name for state (e.g., CA instead of California)
+          }
+        }
+  
+        const formattedLocation = `${city}, ${state}`;
+        console.log('✅ Found location:', formattedLocation);
+        return formattedLocation;
+      }
+      
+      console.log('❌ No results found in geocoding response');
+      return null;
+    } catch (error) {
+      console.error('❌ Geocoding error:', error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     if (!searchParams.has('timestamp')) {
       const newParams = new URLSearchParams(searchParams.toString());
@@ -196,6 +246,10 @@ const HomeContent = () => {
     setTimeout(() => {
       checkScrollable();
     }, 1000); // Delay by 1s to ensure DOM is ready
+  }, []);
+
+  useEffect(() => {
+    console.log('🔑 GOOGLE_MAPS_API_KEY present:', !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
   }, []);
   
   useLayoutEffect(() => {
@@ -290,7 +344,7 @@ const HomeContent = () => {
     // No location in URL - check for geolocation
     if (!locationLocked && "geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           const newLat = position.coords.latitude;
           const newLon = position.coords.longitude;
           
@@ -312,7 +366,14 @@ const HomeContent = () => {
               url.toString()
             );
           } else {
-            setLocationServicesEnabled(true);  // They have location services, just outside NYC
+            console.log('📍 Location outside NYC detected:', { newLat, newLon });
+            // Get address from coordinates
+            const address = await getAddressFromCoords(newLat, newLon);
+            console.log('📍 Geocoding result:', address);
+            setUserLocation(address || "Unknown location");
+            console.log('📍 UserLocation state updated to:', address || "Unknown location");
+            
+            setLocationServicesEnabled(true);
             setIsOutsideNYC(true);
             // setIsBannerVisible(true);
             // Set Union Square as default with proper URL parameters
@@ -1056,7 +1117,15 @@ useEffect(() => {
     }, 1000);
     return () => clearInterval(ticker);
   }, [location.lat, location.lon]);
-
+  useEffect(() => {
+    console.log('📍 Banner state:', { 
+      locationServicesEnabled, 
+      isOutsideNYC, 
+      userLocation, 
+      isBannerVisible 
+    });
+  }, [locationServicesEnabled, isOutsideNYC, userLocation, isBannerVisible]);
+  
   if (error) {
     return (
       <div style={{ padding: 20, textAlign: "center", fontFamily: "Helvetica, sans-serif" }}>
@@ -1242,6 +1311,7 @@ useEffect(() => {
   justifyContent: "flex-start",
   gap: "8px",
 }}>
+  
               {isBannerVisible && windowWidth !== null && (
                 <div
                   style={{
@@ -1278,10 +1348,10 @@ useEffect(() => {
     flex: 1,
   }}
 >
-  {!locationServicesEnabled 
+{!locationServicesEnabled 
     ? "📍 Please turn on location services to get information for the closest stops to you!"
     : isOutsideNYC 
-      ? "📍 Doesn't look like you're in NYC! Please select from the dropdown or type in an address."
+      ? `📍 You're currently in ${userLocation}. Since you're outside NYC, please select from the dropdown or type in an NYC address.`
       : "📍 Please turn on location services to get information for the closest stops to you!"}
 </span>
                 <button
