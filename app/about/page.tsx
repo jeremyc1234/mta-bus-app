@@ -147,7 +147,12 @@ export default function About() {
           {
             question: "How accurate is the tracking information?",
             answer:
-              "We use the MTA Bus Time API, which generally provides accurate, real-time updates. However, there may be occasional inaccuracies. If something doesn't look right, please contact the MTA for details.",
+              "We use the MTA Bus Time API, which generally provides accurate, real-time updates. However, there may be occasional inaccuracies. There is a known issue where the API can return the same direction even if the correct direction is different please be cautious of the data displayed. If something doesn't look right, please contact the MTA for details.",
+          },
+          {
+            question: "What do I do if the information seems inaccurate?",
+            answer:
+              "Text your bus stop code or intersection To: 511123 while you’re on your way to the bus stop. \nKeep in mind: Be sure to insert a space between bus stop code or intersection and bus route (such as 103903 Bx39 or Port Richmond Av and Orange Av S59). Some bus stops have multiple routes. To get the bus arrival information for just one route at the stop, include the bus route in your text To: 511123.",
           },
           {
             question: "Where can I find additional planned MTA schedule information?",

@@ -200,45 +200,79 @@ const timerRef = useRef<HTMLSpanElement>(null);
   };
   // Add this useEffect to page.tsx
   useEffect(() => {
-    // 1) First set to localStorage value while waiting for geolocation
-    const savedLat = localStorage.getItem("savedLat");
-    const savedLon = localStorage.getItem("savedLon");
-    
-    if (savedLat && savedLon) {
-      const latNum = parseFloat(savedLat);
-      const lonNum = parseFloat(savedLon);
-      if (!isNaN(latNum) && !isNaN(lonNum)) {
-        setLocation({ lat: latNum, lon: lonNum });
-      }
-    } else {
-      // Only use Union Square if no localStorage value exists
-      setLocation({ lat: UNION_SQUARE_LAT, lon: UNION_SQUARE_LON });
-    }
+    let geolocationAttempted = false;
   
-    // 2) Try to get geolocation, which will override the above if successful
+    // 1. Try Geolocation first
     if ("geolocation" in navigator) {
+      geolocationAttempted = true;
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const { latitude, longitude } = pos.coords;
           if (isWithinNYC(latitude, longitude)) {
             setLocation({ lat: latitude, lon: longitude });
-            // Update localStorage with new position
+            // Update localStorage with new geolocation
             localStorage.setItem("savedLat", String(latitude));
             localStorage.setItem("savedLon", String(longitude));
+            
+            // Update the dropdown selection to match geolocation
+            const geoLocation = {
+              value: {
+                lat: latitude,
+                lon: longitude,
+                label: `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`
+              },
+              label: `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`,
+              isCustomAddress: false
+            };
+            localStorage.setItem('selectedLocation', JSON.stringify(geoLocation));
           }
         },
         (error) => {
-          // On geolocation error, we keep the localStorage value 
-          // or Union Square that we already set above
           console.log('Geolocation error:', error);
+          // On geolocation error, fall back to saved location or Union Square
+          useFallbackLocation();
         },
-        // Add options to prevent timeout issues
         {
-          maximumAge: 30000,        // Accept positions up to 30 seconds old
-          timeout: 27000,           // Wait up to 27 seconds for position
-          enableHighAccuracy: false // Don't need high accuracy, speeds up response
+          maximumAge: 30000,
+          timeout: 27000,
+          enableHighAccuracy: false
         }
       );
+    }
+  
+    // If geolocation isn't available, use fallback immediately
+    if (!geolocationAttempted) {
+      useFallbackLocation();
+    }
+  
+    function useFallbackLocation() {
+      // 2. Try saved location
+      const savedLat = localStorage.getItem("savedLat");
+      const savedLon = localStorage.getItem("savedLon");
+      
+      if (savedLat && savedLon) {
+        const latNum = parseFloat(savedLat);
+        const lonNum = parseFloat(savedLon);
+        if (!isNaN(latNum) && !isNaN(lonNum)) {
+          setLocation({ lat: latNum, lon: lonNum });
+        }
+      } else {
+        // 3. Fall back to Union Square if no saved location
+        setLocation({ lat: UNION_SQUARE_LAT, lon: UNION_SQUARE_LON });
+        
+        // Set Union Square as the default in localStorage
+        const defaultLocation = BUS_STOP_LOCATIONS[0];
+        const defaultOption = {
+          value: {
+            lat: defaultLocation.lat,
+            lon: defaultLocation.lon,
+            label: defaultLocation.label,
+          },
+          label: defaultLocation.label,
+          isCustomAddress: false,
+        };
+        localStorage.setItem('selectedLocation', JSON.stringify(defaultOption));
+      }
     }
   }, [setLocation]);
 
@@ -1030,13 +1064,15 @@ useEffect(() => {
   }
   const finalStops = [...stopsWithArrivals, ...stopsNoArrivals];
 
-  const fetchRouteStops = async (routeId: string, tileStopName: string) => {
+  const fetchRouteStops = async (routeId: string, tileStopName: string, destination: string, direction: string) => {
     try {
       const encodedRouteId = encodeURIComponent(routeId);
       const encodedTileStopName = encodeURIComponent(tileStopName);
+      const encodedDestination = encodeURIComponent(destination);
+      const encodedDirection = encodeURIComponent(direction);
 
       const response = await fetch(
-        `/api/routestops?routeId=${encodedRouteId}&tileStopName=${encodedTileStopName}`
+        `/api/routestops?routeId=${encodedRouteId}&tileStopName=${encodedTileStopName}&destination=${encodedDestination}&direction=${encodedDirection}`
       );
 
       if (!response.ok) {
@@ -1049,7 +1085,8 @@ useEffect(() => {
       console.error('Error fetching route stops:', error.message || error);
       return [];
     }
-  };
+};
+
 
   function getStopArrivals(stopId: string) {
     const visits = data.arrivals?.[stopId] || [];
@@ -1065,8 +1102,19 @@ useEffect(() => {
           .replace("MTABC_", "");
       }
 
+      // Add these debug logs
+      console.log('🚌 Raw MTA Direction Data:', {
+        direction: mvj.DirectionRef,
+        destination: mvj.DestinationName,
+        vehicleRef: mvj.VehicleRef,
+        fullMvj: mvj
+      });
+
+      // Get the direction (0 or 1) from the DirectionRef
+      const direction = mvj.DirectionRef;
       const destination = mvj.DestinationName || "Unknown Destination";
-      const directionKey = `to ${destination}`;
+      // Use direction as key but show destination in UI
+      const directionKey = `${direction}: to ${destination}`;
 
       if (!routeDirectionMap[route]) {
         routeDirectionMap[route] = {};
@@ -1078,12 +1126,13 @@ useEffect(() => {
       const vehicleRef = mvj?.VehicleRef?.replace(/^\D+/, '') || 'Unknown VehicleRef';
       routeDirectionMap[route][directionKey].push({
         ...visit,
+        direction, // Include direction in visit data
         vehicleRef
       });
     });
 
     return routeDirectionMap;
-  }
+}
 
   function getMinutesAway(dateString: string) {
     const arrivalDate = new Date(dateString);
@@ -1642,56 +1691,83 @@ useEffect(() => {
                                                   key={i}
                                                   onClick={async () => {
                                                     try {
-                                                      const direction = stop.direction || 'uptown';
-                                                      const stops = await fetchRouteStops(routeName, stop.stopName);
-                                                      const stopArrivals = data.arrivals?.[stop.stopId] || [];
-
-                                                      // Attempt to match VehicleRef including prefix
-                                                      const selectedArrival = stopArrivals.find((arrival: any) => {
-                                                        const arrivalVehicleRef = arrival?.MonitoredVehicleJourney?.VehicleRef?.toString()?.trim();
-                                                        const clickedVehicleRef = visit.vehicleRef?.toString()?.trim();
-                                                        return (
-                                                          arrivalVehicleRef === clickedVehicleRef ||
-                                                          arrivalVehicleRef?.includes(clickedVehicleRef) ||
-                                                          clickedVehicleRef?.includes(arrivalVehicleRef)
-                                                        );
-                                                      });
-
-                                                      if (!selectedArrival) {
-                                                        console.warn('⚠️ No matching arrival found for VehicleRef:', visit.vehicleRef);
-                                                        console.warn('🚨 Available VehicleRefs in StopArrivals:', stopArrivals.map((a: any) => a?.MonitoredVehicleJourney?.VehicleRef));
-                                                      }
-
-                                                      let stopsAway = 0;
-
-                                                      if (selectedArrival) {
-                                                        const distances = selectedArrival?.MonitoredVehicleJourney?.MonitoredCall?.Extensions?.Distances;
-                                                        if (distances?.StopsFromCall != null) {
-                                                          stopsAway = distances.StopsFromCall;
-                                                        } else if (distances?.DistanceFromCall != null) {
-                                                          const averageStopDistance = 500; // Average stop distance in meters
-                                                          stopsAway = Math.round(distances.DistanceFromCall / averageStopDistance);
+                                                        const stopArrivals = data.arrivals?.[stop.stopId] || [];
+                                                
+                                                        // Attempt to match VehicleRef including prefix
+                                                        const selectedArrival = stopArrivals.find((arrival: any) => {
+                                                            const arrivalVehicleRef = arrival?.MonitoredVehicleJourney?.VehicleRef?.toString()?.trim();
+                                                            const clickedVehicleRef = visit.vehicleRef?.toString()?.trim();
+                                                            return (
+                                                                arrivalVehicleRef === clickedVehicleRef ||
+                                                                arrivalVehicleRef?.includes(clickedVehicleRef) ||
+                                                                clickedVehicleRef?.includes(arrivalVehicleRef)
+                                                            );
+                                                        });
+                                                
+                                                        if (!selectedArrival) {
+                                                            console.warn('⚠️ No matching arrival found for VehicleRef:', visit.vehicleRef);
+                                                            console.warn('🚨 Available VehicleRefs in StopArrivals:', stopArrivals.map((a: any) => a?.MonitoredVehicleJourney?.VehicleRef));
                                                         }
-                                                      }
-
-                                                      console.log(
-                                                        `🚍 Stops Away Calculated: ${stopsAway}, VehicleRef: ${visit.vehicleRef || 'Unknown VehicleRef'}`
+                                                
+                                                        // Get direction from selectedArrival
+                                                        const direction = selectedArrival?.MonitoredVehicleJourney?.DirectionRef;
+                                                        
+                                                        // Add these diagnostic logs
+                                                                                                                  
+                                                          console.log('🚌 Direction Resolution:', {
+                                                            destination: selectedArrival?.MonitoredVehicleJourney?.DestinationName,
+                                                            rawDirection: direction,
+                                                            vehicleRef: visit.vehicleRef
+                                                          });
+                                                
+                                                        const stops = await fetchRouteStops(
+                                                          routeName, 
+                                                          stop.stopName,
+                                                          selectedArrival?.MonitoredVehicleJourney?.DestinationName || "",
+                                                          direction || "0"
                                                       );
-
-                                                      showBusInfo(
-                                                        routeName,
-                                                        stops,
-                                                        stopsAway,
-                                                        selectedArrival?.MonitoredVehicleJourney?.DestinationName || "Unknown Destination",
-                                                        stop.stopName,
-                                                        selectedStop || stop.stopName,
-                                                        stopsAway,
-                                                        visit.vehicleRef // Pass VehicleRef explicitly
-                                                      );
+                                                
+                                                        // Log after API call
+                                                        console.log('🚏 Route Stops Response:', {
+                                                            routeName,
+                                                            stopName: stop.stopName,
+                                                            destination: selectedArrival?.MonitoredVehicleJourney?.DestinationName,
+                                                            direction: direction,
+                                                            stopsCount: stops.length,
+                                                            firstStop: stops[0],
+                                                            lastStop: stops[stops.length - 1]
+                                                        });
+                                                
+                                                        let stopsAway = 0;
+                                                
+                                                        if (selectedArrival) {
+                                                            const distances = selectedArrival?.MonitoredVehicleJourney?.MonitoredCall?.Extensions?.Distances;
+                                                            if (distances?.StopsFromCall != null) {
+                                                                stopsAway = distances.StopsFromCall;
+                                                            } else if (distances?.DistanceFromCall != null) {
+                                                                const averageStopDistance = 500; // Average stop distance in meters
+                                                                stopsAway = Math.round(distances.DistanceFromCall / averageStopDistance);
+                                                            }
+                                                        }
+                                                
+                                                        console.log(
+                                                            `🚍 Stops Away Calculated: ${stopsAway}, VehicleRef: ${visit.vehicleRef || 'Unknown VehicleRef'}`
+                                                        );
+                                                
+                                                        showBusInfo(
+                                                            routeName,
+                                                            stops,
+                                                            stopsAway,
+                                                            selectedArrival?.MonitoredVehicleJourney?.DestinationName || "Unknown Destination",
+                                                            stop.stopName,
+                                                            selectedStop || stop.stopName,
+                                                            stopsAway,
+                                                            visit.vehicleRef // Pass VehicleRef explicitly
+                                                        );
                                                     } catch (error) {
-                                                      console.error('🚨 Error fetching stop data:', error);
+                                                        console.error('🚨 Error fetching stop data:', error);
                                                     }
-                                                  }}
+                                                }}
 
                                                   style={{
                                                     margin: "8px 0",

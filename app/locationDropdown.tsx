@@ -49,108 +49,54 @@ const [addressSuggestions, setAddressSuggestions] = useState<Array<{
   }>>([]);
   const [isLoading, setIsLoading] = useState(false);
   useEffect(() => {
-  // We only want to run this once, so guard with a ref
-  if (initializeDefaultRef.current) return;
-
-  const cachedLocation = localStorage.getItem('selectedLocation');
-  if (cachedLocation) {
-    // If there's a saved location, use it
-    const parsedLocation = JSON.parse(cachedLocation);
-
-    setSelectedValue(parsedLocation);
-    setInputValue(parsedLocation.label || '');
-
-    if (parsedLocation.value?.lat && parsedLocation.value?.lon) {
+    // We only want to run this once, so guard with a ref
+    if (initializeDefaultRef.current) return;
+  
+    // Initially set from localStorage if it exists
+    const cachedLocation = localStorage.getItem('selectedLocation');
+    if (cachedLocation) {
+      const parsedLocation = JSON.parse(cachedLocation);
+      setSelectedValue(parsedLocation);
+      setInputValue(parsedLocation.label || '');
+  
+      if (parsedLocation.value?.lat && parsedLocation.value?.lon) {
+        onLocationChangeRef.current({
+          lat: parsedLocation.value.lat,
+          lon: parsedLocation.value.lon,
+        });
+        setLocation({
+          lat: parsedLocation.value.lat,
+          lon: parsedLocation.value.lon,
+        });
+      }
+    } else {
+      // If no saved location, use Union Square as fallback
+      const defaultLocation = BUS_STOP_LOCATIONS[0];
+      const defaultOption = {
+        value: {
+          lat: defaultLocation.lat,
+          lon: defaultLocation.lon,
+          label: defaultLocation.label,
+        },
+        label: defaultLocation.label,
+        isCustomAddress: false,
+      };
+  
+      setSelectedValue(defaultOption);
+      setInputValue(defaultLocation.label);
+      
       onLocationChangeRef.current({
-        lat: parsedLocation.value.lat,
-        lon: parsedLocation.value.lon,
-      });
-      setLocation({
-        lat: parsedLocation.value.lat,
-        lon: parsedLocation.value.lon,
-      });
-    }
-  } else {
-    // If there's no saved location, default to your "Union Square"
-    const defaultLocation = BUS_STOP_LOCATIONS[0]; // e.g. Union Square
-    const defaultOption = {
-      value: {
         lat: defaultLocation.lat,
         lon: defaultLocation.lon,
-        label: defaultLocation.label,
-      },
-      label: defaultLocation.label,
-      isCustomAddress: false,
-    };
-
-    setSelectedValue(defaultOption);
-    setInputValue(defaultLocation.label);
-
-    onLocationChangeRef.current({
-      lat: defaultLocation.lat,
-      lon: defaultLocation.lon,
-    });
-    setLocation({
-      lat: defaultLocation.lat,
-      lon: defaultLocation.lon,
-    });
-  }
-
-  // Mark as initialized so we don't run this logic again
-  initializeDefaultRef.current = true;
-}, [setLocation]);
-
-useEffect(() => {
-  // We only want to run this once, so guard with a ref
-  if (initializeDefaultRef.current) return;
-
-  const cachedLocation = localStorage.getItem('selectedLocation');
-  if (cachedLocation) {
-    // If there's a saved location, use it
-    const parsedLocation = JSON.parse(cachedLocation);
-
-    setSelectedValue(parsedLocation);
-    setInputValue(parsedLocation.label || '');
-
-    if (parsedLocation.value?.lat && parsedLocation.value?.lon) {
-      onLocationChangeRef.current({
-        lat: parsedLocation.value.lat,
-        lon: parsedLocation.value.lon,
       });
       setLocation({
-        lat: parsedLocation.value.lat,
-        lon: parsedLocation.value.lon,
-      });
-    }
-  } else {
-    // If there's no saved location, default to your "Union Square"
-    const defaultLocation = BUS_STOP_LOCATIONS[0]; // e.g. Union Square
-    const defaultOption = {
-      value: {
         lat: defaultLocation.lat,
         lon: defaultLocation.lon,
-        label: defaultLocation.label,
-      },
-      label: defaultLocation.label,
-      isCustomAddress: false,
-    };
-
-    setSelectedValue(defaultOption);
-    setInputValue(defaultLocation.label);
-
-    onLocationChangeRef.current({
-      lat: defaultLocation.lat,
-      lon: defaultLocation.lon,
-    });
-    setLocation({
-      lat: defaultLocation.lat,
-      lon: defaultLocation.lon,
-    });
-  }
-
-  // Mark as initialized so we don't run this logic again
-  initializeDefaultRef.current = true;
-}, [setLocation]);
+      });
+    }
+  
+    initializeDefaultRef.current = true;
+  }, [setLocation]);
 
   useEffect(() => {
     onLocationChangeRef.current = onLocationChange;
@@ -384,7 +330,12 @@ useEffect(() => {
       value={selectedValue}
       placeholder="Search location or address..."
       noOptionsMessage={() => null} // This will always show options
-      onFocus={() => {setInputValue('')}} // Clear input on focus to show all options
+      onFocus={() => {
+        // Only clear input if it's not the default Union Square location
+        if (selectedValue?.label !== BUS_STOP_LOCATIONS[0].label) {
+          setInputValue('');
+        }
+      }}
       filterOption={(option, input) => {
         if (!input) return true; // Show all options when no input
         return option.label.toLowerCase().includes(input.toLowerCase());

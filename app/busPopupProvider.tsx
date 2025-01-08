@@ -11,7 +11,6 @@ import React, {
 import { useLockBodyScroll } from '@uidotdev/usehooks';
 import Image from 'next/image';
 
-
 const RainbowAnimation = `
   @keyframes rainbowMove {
     to { background-position: 0 200% }
@@ -31,9 +30,8 @@ interface BusInfo {
   userLocation?: string;
   tileStopName: string;
   stopsAway: number;
-  vehicleRef?: string; // Add vehicleRef
+  vehicleRef?: string;
 }
-
 
 interface BusPopupContextType {
   showBusInfo: (info: BusInfo) => void;
@@ -49,7 +47,7 @@ interface BusRoutePopupProps {
   userLocation?: string;
   tileStopName: string;
   stopsAway: number;
-  vehicleRef?: string; // Add vehicleRef
+  vehicleRef?: string;
 }
 
 interface BusContentProps {
@@ -61,7 +59,7 @@ interface BusContentProps {
     tileStopName: string,
     userLocation?: string,
     stopsAway?: number,
-    vehicleRef?: string // ✅ Add vehicleRef here
+    vehicleRef?: string
   ) => void) => React.ReactNode;
 }
 
@@ -76,9 +74,7 @@ const BusRoutePopup = memo(({
   userLocation,
   tileStopName,
   stopsAway,
-}: BusRoutePopupProps) => {useEffect(() => {
-    // console.log('🛑 Stops Away in Popup:', stopsAway);
-  }, [stopsAway]);
+}: BusRoutePopupProps) => {
   const scrollableRef = useRef<HTMLDivElement>(null);
   const [stopPosition, setStopPosition] = useState<'above' | 'below' | 'visible'>('below');
 
@@ -94,30 +90,25 @@ const BusRoutePopup = memo(({
   );
 
   const adjustedStops = useMemo(() => {
-    let stopsToUse = [...stops]; // Create a copy to avoid modifying original
-    
-    // Check if the tileStopName exists in the current stop list
-    const tileStopExists = stopsToUse.includes(tileStopName);
-    
-    if (!tileStopExists) {
-      console.warn(
-        `Tile stop "${tileStopName}" not found in current stops list. Attempting to switch direction.`
-      );
-  
-      // Check if there's an alternate direction
-      stopsToUse.reverse();
-      const tileStopInAlternate = stopsToUse.includes(tileStopName);
-  
-      if (!tileStopInAlternate) {
-        console.warn('Tile stop not found in either direction.');
-        stopsToUse = stops; // Reset to original if not found
-      }
-    }
-  
-    // Ensure furthest stop is at the bottom by maintaining correct order
-    const isUptown = currentStop > stopsToUse.length / 2;
-    return isUptown ? stopsToUse.reverse() : stopsToUse;
-  }, [stops, tileStopName, currentStop]);
+    let stopsToUse = [...stops];
+    return stopsToUse;
+  }, [stops]);
+
+  // Calculate stops between user stop and top of list
+  const stopsToTop = useMemo(() => {
+    const userStopIndex = adjustedStops.findIndex(stop => stop === tileStopName);
+    return userStopIndex;
+  }, [adjustedStops, tileStopName]);
+
+  // Determine if bus is beyond visible stops
+  const isBusBeyondStops = useMemo(() => {
+    return stopsAway > stopsToTop;
+  }, [stopsAway, stopsToTop]);
+
+  // Calculate stops beyond the top if applicable
+  const stopsBeyondTop = useMemo(() => {
+    return isBusBeyondStops ? stopsAway - stopsToTop : 0;
+  }, [isBusBeyondStops, stopsAway, stopsToTop]);
 
   const estimatedStopIndex = useMemo(() => {
     const closestStopIndex = adjustedStops.findIndex(stop => stop === tileStopName);
@@ -126,17 +117,15 @@ const BusRoutePopup = memo(({
   }, [adjustedStops, tileStopName, stopsAway]);
 
   const busPosition = useMemo(() => {
-    // Use estimatedStopIndex if valid; otherwise, fallback to currentStop
-    const busStopIndex = estimatedStopIndex !== -1 ? estimatedStopIndex : currentStop;
-  
-    // Ensure the index is within bounds
-    const clampedIndex = Math.max(0, Math.min(busStopIndex, adjustedStops.length - 1));
-  
-    // Calculate the position as a percentage
-    return (clampedIndex / (adjustedStops.length - 1)) * 100;
-  }, [adjustedStops, estimatedStopIndex, currentStop]);
+    if (isBusBeyondStops) return 0;
+    
+    const estimatedIndex = adjustedStops.findIndex((stop, index) => index === estimatedStopIndex);
+    
+    const busStopIndex = estimatedIndex !== -1 ? estimatedIndex : currentStop;
+    
+    return (busStopIndex / (adjustedStops.length - 1)) * 100;
+  }, [adjustedStops, estimatedStopIndex, currentStop, isBusBeyondStops]);
 
-  // Stable scroll handler using ref
   const handleScroll = useCallback((event: Event) => {
     const scrollEl = event.target as HTMLDivElement;
     if (!scrollEl?.children) return;
@@ -147,10 +136,7 @@ const BusRoutePopup = memo(({
     if (closestStopElement) {
       const rect = closestStopElement.getBoundingClientRect();
       const containerRect = scrollEl.getBoundingClientRect();
-  
-      // Check if the stop is fully or partially visible in the viewport
-      const isVisible =
-        rect.top < containerRect.bottom && rect.bottom > containerRect.top;
+      const isVisible = rect.top < containerRect.bottom && rect.bottom > containerRect.top;
   
       if (isVisible) {
         setStopPosition('visible');
@@ -162,29 +148,6 @@ const BusRoutePopup = memo(({
     }
   }, []);
 
-  BusRoutePopup.displayName = 'BusRoutePopup';
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const scrollEl = scrollableRef.current;
-      if (!scrollEl) return;
-  
-      const targetDiv = Array.from(scrollEl.querySelectorAll('div[data-stop]'))
-        .find(div => div.getAttribute('data-stop') === adjustedStops[estimatedStopIndex]);
-  
-      if (targetDiv) {
-        targetDiv.scrollIntoView({ 
-          behavior: 'smooth',
-          block: 'center' 
-        });
-      }
-    }, 100);
-  
-    return () => clearTimeout(timer);
-  }, [tileStopName, estimatedStopIndex, adjustedStops]);
-
-
-  // Set up scroll listener
   useEffect(() => {
     const scrollEl = scrollableRef.current;
     if (!scrollEl) return;
@@ -197,7 +160,13 @@ const BusRoutePopup = memo(({
     };
   }, [handleScroll]);
 
-  
+  const [showDriveAnimation, setShowDriveAnimation] = useState(true);
+
+  useEffect(() => {
+    setShowDriveAnimation(true);
+    requestAnimationFrame(() => setShowDriveAnimation(false));
+  }, []);
+
   const stopsList = useMemo(() => (
     adjustedStops.map((stop: string, index: number) => {
       const isUserStop = stop === userLocation;
@@ -208,15 +177,15 @@ const BusRoutePopup = memo(({
       let backgroundColor = 'transparent';
   
       if (isUserStop && isCurrentStop) {
-        backgroundColor = '#e6f7ff'; // Light blue when closest stop and MTA-provided stop match
+        backgroundColor = '#e6f7ff';
       } else if (isUserStop) {
-        backgroundColor = '#e6f7ff'; // Light orange for closest stop
+        backgroundColor = '#e6f7ff';
       } else if (isCurrentStop) {
-        backgroundColor = '#FFEE93'; // Yellow for MTA-provided stop
+        backgroundColor = '#FFEE93';
       } else if (isTileStop) {
-        backgroundColor = '#e6f7ff'; // Light blue for tile-selected stop
-      } else if (isEstimatedStop) {
-        backgroundColor = '#FFD700'; // Gold for estimated stop
+        backgroundColor = '#e6f7ff';
+      } else if (isEstimatedStop && !isBusBeyondStops) {
+        backgroundColor = '#FFD700';
       }
   
       return (
@@ -237,7 +206,6 @@ const BusRoutePopup = memo(({
           }}
         >
           <span>{stop}</span>
-  
           {isCurrentStop && (
             <span style={{ fontSize: '0.8em', color: '#666', marginTop: '4px' }}>
               (MTA provided bus location)
@@ -248,7 +216,7 @@ const BusRoutePopup = memo(({
               (Closest stop to you)
             </span>
           )}
-          {isEstimatedStop && (
+          {isEstimatedStop && !isBusBeyondStops && (
             <span style={{ fontSize: '0.8em', color: '#666', marginTop: '4px' }}>
               (Our estimated bus location)
             </span>
@@ -256,21 +224,7 @@ const BusRoutePopup = memo(({
         </div>
       );
     })
-  ), [adjustedStops, userLocation, currentStop, tileStopName, estimatedStopIndex]);
-  
-const handleOverlayClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-  if (e.target === e.currentTarget) {
-    onClose();
-  }
-}, [onClose]);
-
-const [showDriveAnimation, setShowDriveAnimation] = useState(true);
-
-useEffect(() => {
-  setShowDriveAnimation(true);
-  // Start animation immediately
-  requestAnimationFrame(() => setShowDriveAnimation(false));
-}, []);
+  ), [adjustedStops, userLocation, currentStop, tileStopName, estimatedStopIndex, isBusBeyondStops]);
 
   return (
     <div
@@ -286,7 +240,7 @@ useEffect(() => {
         alignItems: 'center',
         zIndex: 2000,
       }}
-      onClick={handleOverlayClick}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
         style={{
@@ -299,14 +253,8 @@ useEffect(() => {
           flexDirection: 'column',
           position: 'relative',
           overflow: 'hidden',
-          overscrollBehavior: 'contain',
-          ...(typeof window !== 'undefined' && window.innerWidth > 768
-            ? { maxWidth: '600px' } // Wider popup for desktop
-            : {}),
         }}
-        onClick={(e: React.MouseEvent<HTMLDivElement>) => {
-          e.stopPropagation();
-        }}
+        onClick={(e) => e.stopPropagation()}
       >
         <div style={{
           padding: '20px',
@@ -333,6 +281,29 @@ useEffect(() => {
               to {destination}
             </div>
           </h2>
+
+          {isBusBeyondStops && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginTop: '16px',
+              backgroundColor: '#EBF5FF',
+              padding: '12px',
+              borderRadius: '8px',
+            }}>
+              <Image
+                src="/icons/bus_icon.png"
+                alt="Bus"
+                width={110}
+                height={30}
+                style={{ marginRight: '12px' }}
+              />
+              <span style={{ fontWeight: 'bold', color: '#1E40AF' }}>
+                +{stopsBeyondTop} {stopsBeyondTop === 1 ? 'Stop' : 'Stops'} Away
+              </span>
+            </div>
+          )}
         </div>
 
         <div
@@ -342,171 +313,90 @@ useEffect(() => {
             overflowY: 'auto',
             padding: '20px',
             minHeight: 0,
-            WebkitOverflowScrolling: 'touch',
-            overscrollBehavior: 'none',
-            scrollbarWidth: 'thin',
-            maxHeight: 'calc(100% - 60px)',
           }}
         >
-          {/* Inside BusRoutePopup component */}
           <div style={{ display: 'flex', gap: '20px', height: 'auto', minHeight: '100%' }}>
-  {/* Bus Icon and Rainbow */}
-<div style={{ 
-  display: 'flex', 
-  flexDirection: 'column',
-  position: 'relative',
-  marginLeft: '5px',
-  marginRight: '10px',
-  alignItems: 'center'
-}}>
-  {/* Bus Icon */}
-  <div style={{
-    position: 'absolute',
-    top: showDriveAnimation ? '0%' : `${busPosition}%`,
-    width: '40px',
-    height: '150px',
-    transform: 'translateY(-50%)',
-    zIndex: 2,
-    left: '0px', // Align bus and rainbow to the same starting point
-    transition: 'top 1s ease-in-out',
-  }}>
-    <style>{RainbowAnimation}</style>
-    {/* Rainbow Trail */}
-    <div style={{
-      width: '20px',
-      height: '405px',
-      top: '-400px',
-      left: '0px', // Ensure alignment with the bus icon
-      background: `linear-gradient(${isGoingUp ? '0deg' : '180deg'}, 
-        rgba(255,0,0,1) 0%, 
-        rgba(255,154,0,1) 10%, 
-        rgba(208,222,33,1) 20%, 
-        rgba(79,220,74,1) 30%, 
-        rgba(63,218,216,1) 40%, 
-        rgba(47,201,226,1) 50%, 
-        rgba(28,127,238,1) 60%, 
-        rgba(95,21,242,1) 70%, 
-        rgba(186,12,248,1) 80%, 
-        rgba(251,7,217,1) 90%, 
-        rgba(255,0,0,1) 100%)`,
-      backgroundSize: '100% 200%',
-      animation: 'rainbowMove 2s linear infinite',
-      position: 'absolute',
-      zIndex: 1,
-      WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 30%)',
-      maskImage: 'linear-gradient(to bottom, transparent, black 30%)'
-    }} />
-    <Image
-      src={busIcon}
-      alt={isGoingUp ? 'Bus going up' : 'Bus going down'}
-      width={80}
-      height={120}
-      style={{
-        objectFit: 'contain',
-        position: 'relative',
-        zIndex: 3,
-        marginLeft: '-30px'
-      }}
-    />
-  </div>
-</div>
+            {!isBusBeyondStops && (
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                position: 'relative',
+                marginLeft: '5px',
+                marginRight: '10px',
+                alignItems: 'center'
+              }}>
+                <div style={{
+                  position: 'absolute',
+                  top: showDriveAnimation ? '0%' : `${busPosition}%`,
+                  width: '40px',
+                  height: '150px',
+                  transform: 'translateY(-50%)',
+                  zIndex: 2,
+                  left: '0px',
+                  transition: 'top 1s ease-in-out',
+                }}>
+                  <style>{RainbowAnimation}</style>
+                  <div style={{
+                    width: '20px',
+                    height: '405px',
+                    top: '-400px',
+                    left: '0px',
+                    background: `linear-gradient(${isGoingUp ? '0deg' : '180deg'}, 
+                      rgba(255,0,0,1) 0%, 
+                      rgba(255,154,0,1) 10%, 
+                      rgba(208,222,33,1) 20%, 
+                      rgba(79,220,74,1) 30%, 
+                      rgba(63,218,216,1) 40%, 
+                      rgba(47,201,226,1) 50%, 
+                      rgba(28,127,238,1) 60%, 
+                      rgba(95,21,242,1) 70%, 
+                      rgba(186,12,248,1) 80%, 
+                      rgba(251,7,217,1) 90%, 
+                      rgba(255,0,0,1) 100%)`,
+                    backgroundSize: '100% 200%',
+                    animation: 'rainbowMove 2s linear infinite',
+                    position: 'absolute',
+                    zIndex: 1,
+                    WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 30%)',
+                    maskImage: 'linear-gradient(to bottom, transparent, black 30%)'
+                  }} />
+                  <Image
+                    src={busIcon}
+                    alt={isGoingUp ? 'Bus going up' : 'Bus going down'}
+                    width={80}
+                    height={120}
+                    style={{
+                      objectFit: 'contain',
+                      position: 'relative',
+                      zIndex: 3,
+                      marginLeft: '-30px'
+                    }}
+                  />
+                </div>
+              </div>
+            )}
 
-  {/* Blue Line */}
-  <div style={{
-    width: '2px',
-    backgroundColor: '#0078D7',
-    position: 'relative',
-    minHeight: '100%',
-    height: 'auto',
-    zIndex: 0,
-    marginRight: '5px' // Adds spacing between the line and stops
-  }} />
+            <div style={{
+              width: '2px',
+              backgroundColor: '#0078D7',
+              position: 'relative',
+              minHeight: '100%',
+              height: 'auto',
+              zIndex: 0,
+              marginRight: '5px'
+            }} />
 
-  {/* Stops List */}
-<div style={{ flex: 1 }}>
-  {stopsList}
-</div>
-</div>
-</div>
-
-{/* Gradient Shadow and Down Caret */}
-{estimatedStopIndex !== -1 && (
-  <div
-    style={{
-      position: 'absolute',
-      ...(stopPosition === 'above'
-        ? { top: '120px' } // Start below the header
-        : { bottom: 0 }),
-      left: 0,
-      right: 0,
-      height: '150px',
-      background: stopPosition === 'above'
-        ? 'linear-gradient(to bottom, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0))'
-        : 'linear-gradient(to top, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0))',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: stopPosition === 'above' ? 'flex-start' : 'flex-end',
-      alignItems: 'center',
-      zIndex: 10,
-      pointerEvents: 'none',
-      padding: stopPosition === 'above' ? '0' : '20px 0',
-      opacity: stopPosition === 'visible' ? 0 : 1, // Fade in/out
-      transition: 'opacity 0.5s ease-in-out', // Smooth fade transition
-    }}
-  >
-    {/* "Your Stop" Text */}
-    <span
-      style={{
-        color: '#FFF',
-        fontWeight: 'bold',
-        fontSize: '1rem',
-        margin: stopPosition === 'above' ? '20px 0 8px' : '8px 0 10px',
-        zIndex: 11,
-        pointerEvents: 'none',
-        opacity: stopPosition === 'visible' ? 0 : 1, // Fade in/out
-        transition: 'opacity 0.5s ease-in-out', // Smooth fade transition
-      }}
-    >
-      Your Stop
-    </span>
-
-    {/* Caret Icon */}
-    <Image
-      src={stopPosition === 'above' ? '/icons/up_caret.png' : '/icons/down_caret.png'}
-      alt={stopPosition === 'above' ? 'Scroll Up' : 'Scroll Down'}
-      width={60}
-      height={24}
-      style={{
-        pointerEvents: 'auto',
-        cursor: 'pointer',
-        position: 'relative',
-        zIndex: 11,
-        margin: stopPosition === 'above' ? '8px 0 0' : '0 0 20px',
-        opacity: stopPosition === 'visible' ? 0 : 1,
-        transition: 'opacity 0.5s ease-in-out',
-      }}
-      onClick={() => {
-        if (scrollableRef.current) {
-          const scrollEl = scrollableRef.current;
-          const closestStopDiv = Array.from(
-            scrollEl.querySelectorAll('div[data-stop]')
-          ).find((div) => div.textContent?.includes('(Closest stop to you)'));
-
-          if (closestStopDiv) {
-            closestStopDiv.scrollIntoView({
-              behavior: 'smooth',
-              block: 'center',
-            });
-          }
-        }
-      }}
-    />
-  </div>
-)}
-</div>
-</div>
+            <div style={{ flex: 1 }}>
+              {stopsList}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 });
+
+BusRoutePopup.displayName = 'BusRoutePopup';
 
 export const BusContent: React.FC<BusContentProps> = ({ children }) => {
   const { showBusInfo } = useBusPopup();
@@ -519,7 +409,7 @@ export const BusContent: React.FC<BusContentProps> = ({ children }) => {
     tileStopName: string,
     userLocation?: string,
     stopsAway: number = 0,
-    vehicleRef?: string // Add vehicleRef
+    vehicleRef?: string
   ) => {
     showBusInfo({
       route,
@@ -529,7 +419,7 @@ export const BusContent: React.FC<BusContentProps> = ({ children }) => {
       userLocation,
       tileStopName,
       stopsAway,
-      vehicleRef // Pass vehicleRef
+      vehicleRef
     });
   }, [showBusInfo]);
 
@@ -565,7 +455,7 @@ export const BusPopupProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           onClose={hideBusInfo}
           tileStopName={busInfo.tileStopName}
           stopsAway={busInfo.stopsAway}
-          vehicleRef={busInfo.vehicleRef} // Ensure this is passed
+          vehicleRef={busInfo.vehicleRef}
         />
       )}
     </BusPopupContext.Provider>

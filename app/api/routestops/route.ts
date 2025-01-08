@@ -3,8 +3,10 @@ import { NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 
 const MTA_API_KEY = process.env.MTA_API_KEY;
+
 interface StopGroup {
   stopIds: string[];
+  id: string;
 }
 
 export async function GET(request: Request) {
@@ -12,9 +14,11 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const routeId = searchParams.get('routeId');
     const tileStopName = searchParams.get('tileStopName') || 'None';
+    const destination = searchParams.get('destination') || '';
 
     console.log('🛠️ [API START] Processing routeId:', routeId);
     console.log('🛠️ [API START] Processing tileStopName:', tileStopName);
+    console.log('🛠️ [API START] Processing destination:', destination);
 
     if (!MTA_API_KEY) {
       console.error('❌ [CONFIG ERROR] MTA_API_KEY is not configured.');
@@ -33,22 +37,21 @@ export async function GET(request: Request) {
     }
 
     const encodedRouteId = encodeURIComponent(routeId);
-    let routePrefix = 'MTA NYCT'; // Default to NYCT
+    let routePrefix = 'MTA NYCT';
 
-      if (/^(BM|QM|BXM)/.test(routeId.toUpperCase())) {
-        routePrefix = 'MTABC';
-      } else if (/^X\d+/.test(routeId.toUpperCase())) {
-        // Explicitly check for X routes and default to NYCT
-        routePrefix = 'MTA NYCT';
-      }
+    if (/^(BM|QM|BXM)/.test(routeId.toUpperCase())) {
+      routePrefix = 'MTABC';
+    } else if (/^X\d+/.test(routeId.toUpperCase())) {
+      routePrefix = 'MTA NYCT';
+    }
+
     const apiUrl = `http://bustime.mta.info/api/where/stops-for-route/${routePrefix}_${encodedRouteId}.json?key=${MTA_API_KEY}&includePolylines=false`;
-
 
     const response = await fetch(apiUrl, {
       headers: {
         'Accept': 'application/json',
-        'User-Agent': 'MTABusTracker/1.0'
-      }
+        'User-Agent': 'MTABusTracker/1.0',
+      },
     });
 
     if (!response.ok) {
@@ -61,41 +64,70 @@ export async function GET(request: Request) {
       data: {
         stops: Array<{ id: string; name: string }>;
         stopGroupings?: Array<{ stopGroups: StopGroup[] }>;
+        directions?: Array<{ id: string; name: string }>;
       };
     };
-
 
     if (!data?.data?.stops) {
       console.error('❌ [RESPONSE ERROR] Invalid response structure from MTA API.');
       throw new Error('Invalid response structure from MTA API.');
     }
 
-    // Map stops to their names
     const stopsMap = new Map(
       data.data.stops.map((stop: any) => [stop.id, stop.name])
     );
 
     const stopGroupings = data.data.stopGroupings?.[0];
     const stopGroups = stopGroupings?.stopGroups || [];
+    const directions = data.data.directions || [];
 
     const stopsByDirection: Record<string, string[]> = {};
 
     // Group stops by direction
-    if (stopGroups.length > 0) {
-      stopGroups.forEach((group: StopGroup, index: number) => {
-        const direction = index.toString(); // Use index (0 or 1) as direction
-        stopsByDirection[direction] = group.stopIds
-          .map((id: string) => stopsMap.get(id) ?? 'Unnamed Stop')
-          .filter((stop: string) => typeof stop === 'string');
-      });
-    }
+    stopGroups.forEach((group: StopGroup) => {
+      const directionId = group.id;
+      stopsByDirection[directionId] = group.stopIds
+        .map((id: string) => stopsMap.get(id) ?? 'Unnamed Stop')
+        .filter((stop: string) => typeof stop === 'string');
+    });
 
     console.log('🛠️ [STOPS BY DIRECTION] Processed Stops:', stopsByDirection);
 
-    // Find the direction of tileStopName
-    const matchedDirection = Object.entries(stopsByDirection).find(([_dir, stops]) =>
-      stops.includes(tileStopName)
-    )?.[0];
+    // Find matching direction based on destination and stop patterns
+    
+    let matchedDirection = null;
+
+if (destination) {
+  // Strip out "via" parts and clean the destination
+  const destParts = destination.toLowerCase().split(' via ');
+  const cleanDestination = destParts[0].trim();
+
+  // Look at each direction's stops
+  matchedDirection = Object.entries(stopsByDirection).find(([dirId, stops]) => {
+    // Clean and normalize the last stop name
+    const lastStop = stops[stops.length - 1].toLowerCase().split('/')[0].trim();
+    const firstStop = stops[0].toLowerCase().split('/')[0].trim();
+    
+    // Check if destination matches either the first or last stop of this direction
+    return cleanDestination.includes(lastStop) || 
+           cleanDestination.includes(firstStop) ||
+           lastStop.includes(cleanDestination) ||
+           firstStop.includes(cleanDestination);
+  })?.[0];
+
+  // If no match found by destination, use provided direction param
+  const directionParam = searchParams.get('direction');
+  if (!matchedDirection && directionParam) {
+    matchedDirection = directionParam;
+  }
+}
+
+// If still no match found, fall back to stop matching
+if (!matchedDirection) {
+  matchedDirection = Object.entries(stopsByDirection).find(([_dir, stops]) =>
+    stops.includes(tileStopName)
+  )?.[0];
+}
 
     console.log('🧭 [DIRECTION MATCH] Matched Direction:', matchedDirection);
 
@@ -103,18 +135,16 @@ export async function GET(request: Request) {
       ? stopsByDirection[matchedDirection] || []
       : [];
 
-    // Reverse the stops if the direction is '0'
-    if (matchedDirection === '0') {
-      console.log('🔄 [REVERSE] Reversing stops for direction 0');
-      stopsForMatchedDirection = stopsForMatchedDirection.reverse();
-    }
+    // Get the direction name for reference
+    const directionName = directions.find(dir => dir.id === matchedDirection)?.name || 'Unknown';
 
     console.log('✅ [FINAL RESPONSE] Stops for Matched Direction:', stopsForMatchedDirection);
 
     return NextResponse.json({
       stops: stopsForMatchedDirection,
+      direction: directionName,
       tileStopFound: Boolean(matchedDirection),
-      clickedStop: tileStopName
+      clickedStop: tileStopName,
     });
   } catch (error: any) {
     console.error('❌ [FATAL ERROR] Failed to fetch route stops:', error.message);
