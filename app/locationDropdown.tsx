@@ -36,7 +36,10 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
   setIsLocationChanging
 }) => {
   const [inputValue, setInputValue] = useState('');
-  const [selectedValue, setSelectedValue] = useState<LocationSelectOption | null>(null);
+  const [selectedValue, setSelectedValue] = useState<LocationSelectOption | null>(() => {
+    const savedLocation = localStorage.getItem('selectedLocation');
+    return savedLocation ? JSON.parse(savedLocation) : null;
+  });
   const [isAddressMode, setIsAddressMode] = useState(false);
   const { setLocation } = useLocation();
   console.log("📍 isLocationChanging in LocationDropdown:", isLocationChanging);

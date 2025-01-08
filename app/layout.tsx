@@ -9,15 +9,53 @@ const GTM_ID = 'GTM-MLQ6ZJX7';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" style={{ margin: 0, padding: 0 }}>
       <head>
+        <style>
+          {`
+            html, body {
+              margin: 0;
+              padding: 0;
+              min-height: 100vh;
+              display: flex;
+              flex-direction: column;
+              overflow-x: hidden;
+              box-sizing: border-box;
+              width: 100%;
+            }
+
+            body {
+              margin: 0 !important;
+              padding: 0 !important;
+            }
+
+            #__next {
+              display: flex;
+              flex-direction: column;
+              min-height: 100vh;
+              width: 100%;
+            }
+          `}
+        </style>
         <script 
           async 
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9527056951697290"
           crossOrigin="anonymous"
         />
       </head>
-      <body className={inter.className} style={{ overflowX: 'hidden' }}>
+      <body
+        className={inter.className}
+        style={{
+          margin: 0,
+          padding: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: '100vh',
+          overflowX: 'hidden',
+          boxSizing: 'border-box',
+          width: '100%',
+        }}
+      >
         <noscript>
           <iframe
             src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}
@@ -32,13 +70,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main
             style={{
               flex: 1,
-              position: 'relative',
               width: '100%',
-              minHeight: 'auto',
               overflowY: 'auto',
               overflowX: 'hidden',
-              touchAction: 'pan-y',
               boxSizing: 'border-box',
+              margin: 0,
+              padding: 0,
             }}
           >
             {children}
@@ -51,18 +88,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               fontSize: '0.9rem',
               width: '100%',
               marginTop: 'auto',
-              zIndex: '1100',
+              boxSizing: 'border-box',
               overflowX: 'hidden',
             }}
           >
-            <nav style={{
-              display: 'flex',
-              justifyContent: 'center',
-              gap: '1rem',
-              marginBottom: '10px'
-            }}>
-              <Link 
-                href="/" 
+            <nav
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                gap: '1rem',
+                marginBottom: '10px',
+              }}
+            >
+              <Link
+                href="/"
                 style={{
                   textDecoration: 'none',
                   color: 'grey',
@@ -70,8 +109,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               >
                 Home
               </Link>
-              <Link 
-                href="/schedules" 
+              <Link
+                href="/schedules"
                 style={{
                   textDecoration: 'none',
                   color: 'grey',
@@ -79,8 +118,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               >
                 Schedules
               </Link>
-              <Link 
-                href="/about" 
+              <Link
+                href="/about"
                 style={{
                   textDecoration: 'none',
                   color: 'grey',

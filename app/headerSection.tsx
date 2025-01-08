@@ -60,6 +60,7 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
+                    color: '#3b3b3b',
                 }}>
                     <span style={{ fontSize: '1.8rem' }}>🚌</span>
                     Bus routes near

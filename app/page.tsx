@@ -75,6 +75,7 @@ const HomeContent = () => {
   const [locationServicesEnabled, setLocationServicesEnabled] = useState(false);
   const [isBannerVisible, setIsBannerVisible] = useState<boolean>(true);
   const [isIssueBannerVisible, setIsIssueBannerVisible] = useState<boolean>(true);
+  
   const [selectedStop, setSelectedStop] = useState<string | null>(null);
 
   const [data, setData] = useState<any>(null);
@@ -1179,10 +1180,11 @@ useEffect(() => {
       </div>
     }>
 <div style={{ 
-      display: "flex", 
-      flexDirection: "column",
-      minHeight: "100vh",
-    }}>
+  display: "flex", 
+  flexDirection: "column",
+  height: "100%",
+  margin: "0 20px"
+}}>
       {/* Location Services Banner */}
       {isBannerVisible && windowWidth !== null && (
   <div style={{
@@ -1257,19 +1259,18 @@ useEffect(() => {
             <div style={{
               display: "flex",
               flexDirection: "column",
-              minHeight: isMobile ? "50vh" : "100vh", // Changed from 100vh
-              overflowY: "auto",
+              height: "100%",
+              width: "100%",
               position: "relative",
+              flex: 1,
+              overflow: "hidden"
             }}>
               <div style={{
                 padding: "20px 0",
                 textAlign: "center",
                 width: "100%",
                 maxWidth: "100vw",
-                minHeight: isMobile ? "60vh" : "auto", // Reduced from auto
-                height: isMobile ? "60vh" : "100vh",
-                overflowY: "auto",
-                overflowX: "hidden",
+                flex: 1, // Added to ensure it takes up remaining space
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "flex-start",
@@ -1448,7 +1449,7 @@ useEffect(() => {
                       WebkitOverflowScrolling: "touch",
                       scrollSnapType: "x mandatory",
                       margin: "0 -20px",
-                      padding: "0 30px",
+                      padding: "0 20px",
                       height: isMobile ? "50vh" : "calc(100vh - 100px)",
                       boxSizing: "border-box",
                       position: "relative",
@@ -1496,7 +1497,6 @@ useEffect(() => {
                             height: isMobile ? '50vh' : '100%',
                             backgroundColor: '#D3D3D3',
                             borderRadius: '8px',
-                            padding: '8px',
                             boxSizing: 'border-box',
                             marginBottom: '20px',
                             color: 'black',
@@ -1521,8 +1521,12 @@ useEffect(() => {
                                   <button
                                     onClick={() => {
                                       if (scrollContainerRef.current) {
-                                        const tileWidth = scrollContainerRef.current.querySelector('[data-bus-tile]')?.clientWidth || 360;
-                                        scrollContainerRef.current.scrollBy({ left: -tileWidth - 15, behavior: 'smooth' });
+                                        const fullWidth = window.innerWidth - 40; // Same as calc(100vw - 40px)
+                                        const scrollAmount = fullWidth + 16; // Add the gap width
+                                        scrollContainerRef.current.scrollBy({ 
+                                          left: -scrollAmount, 
+                                          behavior: 'smooth' 
+                                        });
                                       }
                                     }}
                                     style={{
@@ -1552,8 +1556,12 @@ useEffect(() => {
                                   <button
                                     onClick={() => {
                                       if (scrollContainerRef.current) {
-                                        const tileWidth = scrollContainerRef.current.querySelector('[data-bus-tile]')?.clientWidth || 360;
-                                        scrollContainerRef.current.scrollBy({ left: tileWidth + 15, behavior: 'smooth' });
+                                        const fullWidth = window.innerWidth - 40; // Same as calc(100vw - 40px)
+                                        const scrollAmount = fullWidth + 16; // Add the gap width
+                                        scrollContainerRef.current.scrollBy({ 
+                                          left: scrollAmount, 
+                                          behavior: 'smooth' 
+                                        });
                                       }
                                     }}
                                     style={{
@@ -1638,6 +1646,7 @@ useEffect(() => {
                                     fontWeight: "bold",
                                     padding: "8px",
                                     display: "flex",
+                                    width: "90%",
                                     flexDirection: "column",
                                     alignItems: "center",
                                     position: "relative",
