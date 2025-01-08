@@ -150,15 +150,20 @@ const BusRoutePopup = memo(({
 
   useEffect(() => {
     const scrollEl = scrollableRef.current;
-    if (!scrollEl) return;
-
-    scrollEl.addEventListener('scroll', handleScroll);
-    handleScroll({ target: scrollEl } as unknown as Event);
-
-    return () => {
-      scrollEl.removeEventListener('scroll', handleScroll);
-    };
-  }, [handleScroll]);
+  
+    if (scrollEl) {
+      const closestStopElement = Array.from(scrollEl.querySelectorAll('div[data-stop]'))
+        .find(div => div.textContent?.includes('(Closest stop to you)'));
+  
+      if (closestStopElement) {
+        // Scroll to the closest stop smoothly
+        closestStopElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+      }
+    }
+  }, [stops]);
 
   const [showDriveAnimation, setShowDriveAnimation] = useState(true);
 

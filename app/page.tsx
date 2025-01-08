@@ -1094,7 +1094,7 @@ useEffect(() => {
       const direction = mvj.DirectionRef;
       const destination = mvj.DestinationName || "Unknown Destination";
       // Use direction as key but show destination in UI
-      const directionKey = `${direction}: to ${destination}`;
+      const directionKey = `to ${destination}`;
 
       if (!routeDirectionMap[route]) {
         routeDirectionMap[route] = {};
@@ -1538,7 +1538,7 @@ useEffect(() => {
                               fontSize: '1rem',
                               color: '#333',
                             }}>
-                              Directions:
+                              Directions to stop:
                             </span>
                             <NavigationButtons
                               stopName={stop.stopName}
