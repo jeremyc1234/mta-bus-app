@@ -317,10 +317,7 @@ const [addressSuggestions, setAddressSuggestions] = useState<Array<{
       noOptionsMessage={() => null} // This will always show options
       onFocus={() => {setInputValue('')}} // Clear input on focus to show all options
       filterOption={(option, input) => {
-        if (!input) {
-          // If input is empty, return *all* options
-          return true;
-        }
+        if (!input) return true; // Show all options when no input
         return option.label.toLowerCase().includes(input.toLowerCase());
       }}
       className="location-dropdown"
