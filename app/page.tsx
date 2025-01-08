@@ -119,6 +119,21 @@ const timerRef = useRef<HTMLSpanElement>(null);
   const UNION_SQUARE_LAT = 40.7359;
   const UNION_SQUARE_LON = -73.9906;
 
+  const [isMapPopupOpen, setIsMapPopupOpen] = useState(false);
+  const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
+
+  // Open the Route Map Popup
+  const openRouteMapPopup = (routeId: string) => {
+    setSelectedRouteId(routeId);
+    setIsMapPopupOpen(true);
+    document.body.classList.add('no-scroll');
+  };
+  
+  const closeRouteMapPopup = () => {
+    setSelectedRouteId(null);
+    setIsMapPopupOpen(false);
+    document.body.classList.remove('no-scroll');
+  };
 
   const getAddressFromCoords = async (lat: number, lon: number) => {
     console.log('🌍 Starting geocoding for coordinates:', { lat, lon });
@@ -1291,6 +1306,24 @@ useEffect(() => {
                       )}
                       <span>(next refresh in <span ref={timerRef}>{timeRemaining}</span>s)</span>
                     </p>
+                    <p style={{
+        textAlign: "center",
+        color: "red",
+        fontStyle: "italic",
+        marginTop: "4px",
+        fontSize: "0.9rem",
+        lineHeight: "1.2"
+      }}>
+        There is a known issue where the MTA Bus Time API occasionally sends the wrong direction, causing the stops list to be incorrect in the popup. Please use this data with caution and reference the 
+        <a 
+          href="https://bustime.mta.info/" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          style={{ color: "red", textDecoration: "underline", marginLeft: "4px" }}
+        >
+          MTA website
+        </a> if needed.
+      </p>
                   </div>
                 )}
 
@@ -1588,9 +1621,8 @@ useEffect(() => {
                                       gap: '8px'
                                     }}
                                     onClick={() => {
-                                      console.log('🚌 Route clicked:', routeName); // Add this log
                                       setSelectedRoute(routeName);
-                                      console.log('🚌 Selected route state updated to:', routeName); // Add this log
+                                      // openRouteMapPopup(routeName);
                                     }}
                                   >
                                     {routeName}
