@@ -1,16 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Select from 'react-select';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { BUS_STOP_LOCATIONS} from './data/busstops';
+import { useLocation } from './locationContext';
 
 interface LocationOption {
   label: string;
   secondaryLabel?: string;
-  lat: number;  // Removed null
-  lon: number;  // Removed null
+  lat: number;
+  lon: number;
 }
 
-// The LocationValue interface remains the same
 interface LocationValue {
   lat: number;
   lon: number;
@@ -24,81 +23,51 @@ interface LocationSelectOption {
   isAddressSearch?: boolean;
 }
   
-  interface LocationDropdownProps {
-    selectedStop?: string | null;
-    onLocationChange: (newLocation: { lat: number | null; lon: number | null }) => void;
-    isLocationChanging: boolean;
-    setIsLocationChanging: (value: boolean) => void;
-  }  
+interface LocationDropdownProps {
+  selectedStop?: string | null;
+  onLocationChange: (newLocation: { lat: number | null; lon: number | null }) => void;
+  isLocationChanging: boolean;
+  setIsLocationChanging: (value: boolean) => void;
+}  
 
-  const LocationDropdown: React.FC<LocationDropdownProps> = ({ 
-    onLocationChange,
-    isLocationChanging,
-    setIsLocationChanging
-  }) => {
-    console.log("📍 isLocationChanging in LocationDropdown:", isLocationChanging);
-
-  const onLocationChangeRef = useRef(onLocationChange);
-
-  useEffect(() => {
-    onLocationChangeRef.current = onLocationChange;
-  }, [onLocationChange]);
-
+const LocationDropdown: React.FC<LocationDropdownProps> = ({ 
+  onLocationChange,
+  isLocationChanging,
+  setIsLocationChanging
+}) => {
   const [inputValue, setInputValue] = useState('');
   const [selectedValue, setSelectedValue] = useState<LocationSelectOption | null>(null);
   const [isAddressMode, setIsAddressMode] = useState(false);
-  const [addressSuggestions, setAddressSuggestions] = useState<Array<{
+  const { setLocation } = useLocation();
+  console.log("📍 isLocationChanging in LocationDropdown:", isLocationChanging);
+  const initializeDefaultRef = useRef(false);
+  const onLocationChangeRef = useRef(onLocationChange);
+const [addressSuggestions, setAddressSuggestions] = useState<Array<{
     value: { lat: number; lon: number; label: string };
     label: string;
     isCustomAddress: boolean;
   }>>([]);
   const [isLoading, setIsLoading] = useState(false);
+  
+  useEffect(() => {
+    onLocationChangeRef.current = onLocationChange;
+  }, [onLocationChange]);
 
-  const updateURL = (newLocation: any, isCustomAddress: boolean) => {
-    const url = new URL(window.location.href);
-    
-    // Clear existing params
-    url.searchParams.delete('lat');
-    url.searchParams.delete('lon');
-    url.searchParams.delete('address');
-    url.searchParams.delete('location');
-    url.searchParams.delete('timestamp');
-  
-    // Add new params
-    if (isCustomAddress) {
-      url.searchParams.set('lat', newLocation.value.lat.toString());
-      url.searchParams.set('lon', newLocation.value.lon.toString());
-      url.searchParams.set('address', newLocation.value.label);
-    } else {
-      url.searchParams.set('location', newLocation.value.label);
-      url.searchParams.set('lat', newLocation.value.lat.toString());
-      url.searchParams.set('lon', newLocation.value.lon.toString());
-    }
-  
-    // Add timestamp
-    url.searchParams.set('timestamp', Date.now().toString());
-  
-    // Update URL with page reload and add to browser history
-    window.history.pushState(
-      { 
-        lat: newLocation.value.lat,
-        lon: newLocation.value.lon,
-        type: isCustomAddress ? 'address' : 'location',
-        label: newLocation.value.label,
-        timestamp: Date.now()
-      }, 
-      document.title, 
-      url.toString()
-    );
-  };
-
+  useEffect(() => {
+    localStorage.setItem('dropdownInputValue', inputValue);
+  }, [inputValue]);
+  useEffect(() => {
+    const saved = localStorage.getItem('dropdownInputValue');
+    if (saved) setInputValue(saved);
+  }, []);
   // 🛠️ Load cached value from localStorage
   useEffect(() => {
     const cachedLocation = localStorage.getItem('selectedLocation');
     if (cachedLocation) {
       const parsedLocation = JSON.parse(cachedLocation);
       setSelectedValue(parsedLocation);
-
+      setInputValue(parsedLocation.label || ''); // Add this line
+  
       if (parsedLocation.value?.lat && parsedLocation.value?.lon) {
         onLocationChangeRef.current({
           lat: parsedLocation.value.lat,
@@ -109,92 +78,52 @@ interface LocationSelectOption {
   }, []);
 
   const locationOptions = BUS_STOP_LOCATIONS
-  .filter((location): location is LocationOption & { lat: number; lon: number } => 
-    location.lat !== null && location.lon !== null
-  )
-  .map((location) => ({
-    value: {
-      lat: location.lat,
-      lon: location.lon,
-      label: location.label
-    },
-    label: location.label,
-    isAddressSearch: false
-  }));
-  
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+    .filter((location): location is LocationOption & { lat: number; lon: number } => 
+      location.lat !== null && location.lon !== null
+    )
+    .map((location) => ({
+      value: {
+        lat: location.lat,
+        lon: location.lon,
+        label: location.label
+      },
+      label: location.label,
+      isAddressSearch: false
+    }));
 
-  useEffect(() => {
-    const locationParam = searchParams.get('location');
-    const addressParam = searchParams.get('address');
-    const lat = searchParams.get('lat');
-    const lon = searchParams.get('lon');
-  
-    if (locationParam) {
-      const predefinedLocation = BUS_STOP_LOCATIONS.find(
-        loc => loc.label === decodeURIComponent(locationParam)
-      );
-      
-      if (predefinedLocation) {
-        setSelectedValue({
-          value: predefinedLocation,
-          label: predefinedLocation.label,
-          isCustomAddress: false
-        });
-  
-        onLocationChangeRef.current({
-          lat: predefinedLocation.lat,
-          lon: predefinedLocation.lon
-        });
-      }
-    } else if (addressParam && lat && lon) {
-      setSelectedValue({
-        value: {
-          lat: parseFloat(lat),
-          lon: parseFloat(lon),
-          label: decodeURIComponent(addressParam)
-        },
-        label: decodeURIComponent(addressParam),
-        isCustomAddress: true
-      });
-  
-      onLocationChangeRef.current({
-        lat: parseFloat(lat),
-        lon: parseFloat(lon)
-      });
-    } else {
-      // Set Union Square as default if no location is specified
+    useEffect(() => {
+  if (!initializeDefaultRef.current) {
+    const cachedLocation = localStorage.getItem('selectedLocation');
+    if (!cachedLocation && !selectedValue) {
       const defaultLocation = BUS_STOP_LOCATIONS[0];
       setSelectedValue({
         value: defaultLocation,
         label: defaultLocation.label,
         isCustomAddress: false
       });
-  
+
       onLocationChangeRef.current({
         lat: defaultLocation.lat,
         lon: defaultLocation.lon
       });
     }
-  }, [searchParams]);
+    initializeDefaultRef.current = true;
+  }
+}, []);
 
-  // Then modify the useEffect for fetching suggestions
   useEffect(() => {
     const fetchSuggestions = async () => {
-      if (isAddressMode && inputValue.length > 3) {
-        setIsLoading(true);
+      if (inputValue.length > 3) {
         try {
           const response = await fetch(
             `https://nominatim.openstreetmap.org/search?` +
-              new URLSearchParams({
-                q: inputValue + ' New York',
-                format: 'json',
-                countrycodes: 'us',
-                limit: '5',
-                addressdetails: '1'
-              })
+            new URLSearchParams({
+              q: inputValue + ' New York',
+              format: 'json',
+              countrycodes: 'us',
+              limit: '5',
+              addressdetails: '1'
+            })
           );
           const data = await response.json();
           const suggestions = data.map((item: any) => ({
@@ -208,32 +137,26 @@ interface LocationSelectOption {
           }));
           setAddressSuggestions(suggestions);
   
+          // If there's exactly one suggestion, use it automatically
           if (suggestions.length === 1) {
             const suggestion = suggestions[0];
             setSelectedValue(suggestion);
+            setInputValue(suggestion.label); // Add this line
             localStorage.setItem('selectedLocation', JSON.stringify(suggestion));
             
-            const url = new URL(window.location.href);
-            url.searchParams.delete('lat');
-            url.searchParams.delete('lon');
-            url.searchParams.delete('address');
-            url.searchParams.delete('location');
+            setLocation({
+              lat: suggestion.value.lat,
+              lon: suggestion.value.lon
+            });
             
-            url.searchParams.set('lat', suggestion.value.lat.toString());
-            url.searchParams.set('lon', suggestion.value.lon.toString());
-            url.searchParams.set('address', suggestion.value.label);
-            
-            router.replace(url.pathname + url.search);
-  
             onLocationChangeRef.current({
               lat: suggestion.value.lat,
               lon: suggestion.value.lon
             });
           }
         } catch (error) {
-          console.error('❌ Error fetching suggestions:', error);
+          console.error('Error fetching suggestions:', error);
         }
-        setIsLoading(false);
       } else {
         setAddressSuggestions([]);
       }
@@ -241,73 +164,61 @@ interface LocationSelectOption {
   
     const timeoutId = setTimeout(fetchSuggestions, 300);
     return () => clearTimeout(timeoutId);
-  }, [inputValue, isAddressMode, pathname, router]);
+  }, [inputValue, setLocation]);
 
-  const handleInputChange = (newValue: string) => {
-    setInputValue(newValue);
-    setIsAddressMode(true);
+  const handleInputChange = (newVal: string, { action }: { action: string }) => {
+    if (action === 'input-change') {
+      // The user is typing text
+      setInputValue(newVal);
+    }
   };
 
   const handleSelectChange = (selectedOption: LocationSelectOption | null) => {
     setSelectedValue(selectedOption);
+    if (selectedOption) {
+      const newLabel = selectedOption.label;
+      setInputValue(newLabel);
+      localStorage.setItem('dropdownInputValue', newLabel);
+      localStorage.setItem('selectedLocation', JSON.stringify(selectedOption));
+    }
     
     if (selectedOption?.value && 
         typeof selectedOption.value.lat === 'number' && 
         typeof selectedOption.value.lon === 'number') {
       setIsLocationChanging(true);
       
-      // Remove the setTimeout and call immediately
-      onLocationChangeRef.current({
+      setLocation({
         lat: selectedOption.value.lat,
-        lon: selectedOption.value.lon,
+        lon: selectedOption.value.lon
       });
       
-      // Update URL
-      const url = new URL(window.location.href);
-      url.searchParams.delete('lat');
-      url.searchParams.delete('lon');
-      url.searchParams.delete('address');
-      url.searchParams.delete('location');
-      
-      if (selectedOption.isCustomAddress) {
-        url.searchParams.set('lat', selectedOption.value.lat.toString());
-        url.searchParams.set('lon', selectedOption.value.lon.toString());
-        url.searchParams.set('address', selectedOption.value.label);
-      } else {
-        url.searchParams.set('location', selectedOption.value.label);
-        url.searchParams.set('lat', selectedOption.value.lat.toString());
-        url.searchParams.set('lon', selectedOption.value.lon.toString());
-      }
-      
-      window.history.pushState(
-        { 
-          lat: selectedOption.value.lat,
-          lon: selectedOption.value.lon,
-          type: selectedOption.isCustomAddress ? 'address' : 'location',
-          label: selectedOption.value.label,
-          timestamp: Date.now()
-        }, 
-        '', 
-        url.toString()
-      );
+      onLocationChangeRef.current({
+        lat: selectedOption.value.lat,
+        lon: selectedOption.value.lon
+      });
     }
   };
-  
+
   
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === 'Enter' && addressSuggestions.length > 0) {
       const firstSuggestion = addressSuggestions[0];
       setSelectedValue(firstSuggestion);
+      setInputValue(firstSuggestion.label);
+      
+      // Update both context and callback
+      setLocation({
+        lat: firstSuggestion.value.lat,
+        lon: firstSuggestion.value.lon
+      });
       
       onLocationChangeRef.current({
         lat: firstSuggestion.value.lat,
         lon: firstSuggestion.value.lon
       });
-  
-      // Update URL with new location
-      updateURL(firstSuggestion, true);
     }
   };
+
   const allOptions = [
     ...locationOptions.filter(opt => !opt.isAddressSearch),
     ...(addressSuggestions.length > 0
@@ -352,41 +263,35 @@ interface LocationSelectOption {
       let color = 'black';
       let fontWeight = 'normal';
     
-      // Check combinations first
       if (isClosestStop && (isEstimatedBusLocation || isMTAProvided)) {
-        // If closest stop is combined with either estimated or MTA location
-        backgroundColor = '#2684FF'; // Blue
+        backgroundColor = '#2684FF';
         color = 'white';
         fontWeight = 'bold';
       } else if (isEstimatedBusLocation && isMTAProvided) {
-        // If estimated location and MTA location are at same stop
-        backgroundColor = '#FFD700'; // Gold
+        backgroundColor = '#FFD700';
         color = 'black';
         fontWeight = 'bold';
       } else if (isClosestStop) {
-        // Individual closest stop
-        backgroundColor = '#2684FF'; // Blue
+        backgroundColor = '#2684FF';
         color = 'white';
         fontWeight = 'bold';
       } else if (isEstimatedBusLocation) {
-        // Individual estimated location
-        backgroundColor = '#FFD700'; // Gold
+        backgroundColor = '#FFD700';
         color = 'black';
         fontWeight = 'bold';
       } else if (isMTAProvided) {
-        // Individual MTA location
-        backgroundColor = '#FFFF00'; // Yellow
+        backgroundColor = '#FFFF00';
         color = 'black';
         fontWeight = 'bold';
       } else if (isSameAsCurrent) {
-        backgroundColor = '#2684FF'; // Blue for current selected location
+        backgroundColor = '#2684FF';
         color = 'white';
         fontWeight = 'bold';
       } else if (isSelected) {
-        backgroundColor = '#2684FF'; // Blue for any selected option
+        backgroundColor = '#2684FF';
         color = 'white';
       } else if (isFocused) {
-        backgroundColor = '#f0f0f0'; // Light gray for hover
+        backgroundColor = '#f0f0f0';
       }
     
       return {
@@ -402,17 +307,22 @@ interface LocationSelectOption {
     <Select
       options={allOptions}
       styles={customStyles}
+      inputValue={inputValue}
       onChange={handleSelectChange}
       onInputChange={handleInputChange}
       onKeyDown={handleKeyDown}
       isLoading={isLoading}
       value={selectedValue}
       placeholder="Search location or address..."
-      noOptionsMessage={() =>
-        inputValue.length > 0
-          ? 'Type more to search for an address...'
-          : 'No locations found'
-      }
+      noOptionsMessage={() => null} // This will always show options
+      onFocus={() => {setInputValue('')}} // Clear input on focus to show all options
+      filterOption={(option, input) => {
+        if (!input) {
+          // If input is empty, return *all* options
+          return true;
+        }
+        return option.label.toLowerCase().includes(input.toLowerCase());
+      }}
       className="location-dropdown"
       classNamePrefix="location-select"
       menuPortalTarget={typeof document !== 'undefined' ? document.body : null}

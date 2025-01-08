@@ -22,11 +22,7 @@ export async function GET(req: NextRequest) {
     '/feedback',
   ];
 
-  const dynamicPaths = BUS_STOP_LOCATIONS.map(
-    (stop) => `/location?lat=${stop.lat}&lon=${stop.lon}`
-  );
-
-  const allPaths = [...staticPaths, ...dynamicPaths];
+  const allPaths = [...staticPaths];
 
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
     <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
