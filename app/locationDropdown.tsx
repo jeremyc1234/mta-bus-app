@@ -48,7 +48,110 @@ const [addressSuggestions, setAddressSuggestions] = useState<Array<{
     isCustomAddress: boolean;
   }>>([]);
   const [isLoading, setIsLoading] = useState(false);
-  
+  useEffect(() => {
+  // We only want to run this once, so guard with a ref
+  if (initializeDefaultRef.current) return;
+
+  const cachedLocation = localStorage.getItem('selectedLocation');
+  if (cachedLocation) {
+    // If there's a saved location, use it
+    const parsedLocation = JSON.parse(cachedLocation);
+
+    setSelectedValue(parsedLocation);
+    setInputValue(parsedLocation.label || '');
+
+    if (parsedLocation.value?.lat && parsedLocation.value?.lon) {
+      onLocationChangeRef.current({
+        lat: parsedLocation.value.lat,
+        lon: parsedLocation.value.lon,
+      });
+      setLocation({
+        lat: parsedLocation.value.lat,
+        lon: parsedLocation.value.lon,
+      });
+    }
+  } else {
+    // If there's no saved location, default to your "Union Square"
+    const defaultLocation = BUS_STOP_LOCATIONS[0]; // e.g. Union Square
+    const defaultOption = {
+      value: {
+        lat: defaultLocation.lat,
+        lon: defaultLocation.lon,
+        label: defaultLocation.label,
+      },
+      label: defaultLocation.label,
+      isCustomAddress: false,
+    };
+
+    setSelectedValue(defaultOption);
+    setInputValue(defaultLocation.label);
+
+    onLocationChangeRef.current({
+      lat: defaultLocation.lat,
+      lon: defaultLocation.lon,
+    });
+    setLocation({
+      lat: defaultLocation.lat,
+      lon: defaultLocation.lon,
+    });
+  }
+
+  // Mark as initialized so we don't run this logic again
+  initializeDefaultRef.current = true;
+}, [setLocation]);
+
+useEffect(() => {
+  // We only want to run this once, so guard with a ref
+  if (initializeDefaultRef.current) return;
+
+  const cachedLocation = localStorage.getItem('selectedLocation');
+  if (cachedLocation) {
+    // If there's a saved location, use it
+    const parsedLocation = JSON.parse(cachedLocation);
+
+    setSelectedValue(parsedLocation);
+    setInputValue(parsedLocation.label || '');
+
+    if (parsedLocation.value?.lat && parsedLocation.value?.lon) {
+      onLocationChangeRef.current({
+        lat: parsedLocation.value.lat,
+        lon: parsedLocation.value.lon,
+      });
+      setLocation({
+        lat: parsedLocation.value.lat,
+        lon: parsedLocation.value.lon,
+      });
+    }
+  } else {
+    // If there's no saved location, default to your "Union Square"
+    const defaultLocation = BUS_STOP_LOCATIONS[0]; // e.g. Union Square
+    const defaultOption = {
+      value: {
+        lat: defaultLocation.lat,
+        lon: defaultLocation.lon,
+        label: defaultLocation.label,
+      },
+      label: defaultLocation.label,
+      isCustomAddress: false,
+    };
+
+    setSelectedValue(defaultOption);
+    setInputValue(defaultLocation.label);
+
+    onLocationChangeRef.current({
+      lat: defaultLocation.lat,
+      lon: defaultLocation.lon,
+    });
+    setLocation({
+      lat: defaultLocation.lat,
+      lon: defaultLocation.lon,
+    });
+  }
+
+  // Mark as initialized so we don't run this logic again
+  initializeDefaultRef.current = true;
+}, [setLocation]);
+
   useEffect(() => {
     onLocationChangeRef.current = onLocationChange;
   }, [onLocationChange]);
@@ -61,21 +164,7 @@ const [addressSuggestions, setAddressSuggestions] = useState<Array<{
     if (saved) setInputValue(saved);
   }, []);
   // 🛠️ Load cached value from localStorage
-  useEffect(() => {
-    const cachedLocation = localStorage.getItem('selectedLocation');
-    if (cachedLocation) {
-      const parsedLocation = JSON.parse(cachedLocation);
-      setSelectedValue(parsedLocation);
-      setInputValue(parsedLocation.label || ''); // Add this line
   
-      if (parsedLocation.value?.lat && parsedLocation.value?.lon) {
-        onLocationChangeRef.current({
-          lat: parsedLocation.value.lat,
-          lon: parsedLocation.value.lon,
-        });
-      }
-    }
-  }, []);
 
   const locationOptions = BUS_STOP_LOCATIONS
     .filter((location): location is LocationOption & { lat: number; lon: number } => 
@@ -90,26 +179,6 @@ const [addressSuggestions, setAddressSuggestions] = useState<Array<{
       label: location.label,
       isAddressSearch: false
     }));
-
-    useEffect(() => {
-  if (!initializeDefaultRef.current) {
-    const cachedLocation = localStorage.getItem('selectedLocation');
-    if (!cachedLocation && !selectedValue) {
-      const defaultLocation = BUS_STOP_LOCATIONS[0];
-      setSelectedValue({
-        value: defaultLocation,
-        label: defaultLocation.label,
-        isCustomAddress: false
-      });
-
-      onLocationChangeRef.current({
-        lat: defaultLocation.lat,
-        lon: defaultLocation.lon
-      });
-    }
-    initializeDefaultRef.current = true;
-  }
-}, []);
 
   useEffect(() => {
     const fetchSuggestions = async () => {

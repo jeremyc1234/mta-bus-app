@@ -116,6 +116,8 @@ const timerRef = useRef<HTMLSpanElement>(null);
     isLoading: false,
     isRefreshing: false
   });
+  const UNION_SQUARE_LAT = 40.7359;
+  const UNION_SQUARE_LON = -73.9906;
 
 
   const getAddressFromCoords = async (lat: number, lon: number) => {
@@ -170,8 +172,8 @@ const timerRef = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     if (location.lat && location.lon) {
       // Store location in sessionStorage
-      sessionStorage.setItem("savedLat", location.lat.toString());
-      sessionStorage.setItem("savedLon", location.lon.toString());
+      localStorage.setItem("savedLat", location.lat.toString());
+      localStorage.setItem("savedLon", location.lon.toString());
     }
   }, [location.lat, location.lon]);
 
@@ -198,44 +200,47 @@ const timerRef = useRef<HTMLSpanElement>(null);
   };
   // Add this useEffect to page.tsx
   useEffect(() => {
-    const savedLat = sessionStorage.getItem("savedLat");
-    const savedLon = sessionStorage.getItem("savedLon");
-  
+    // 1) First set to localStorage value while waiting for geolocation
+    const savedLat = localStorage.getItem("savedLat");
+    const savedLon = localStorage.getItem("savedLon");
+    
     if (savedLat && savedLon) {
       const latNum = parseFloat(savedLat);
       const lonNum = parseFloat(savedLon);
-  
-      // If the stored location is valid, set it immediately
       if (!isNaN(latNum) && !isNaN(lonNum)) {
         setLocation({ lat: latNum, lon: lonNum });
-        setLocationServicesEnabled(true);
-        return; // Skip geolocation because we already have a stored location
       }
+    } else {
+      // Only use Union Square if no localStorage value exists
+      setLocation({ lat: UNION_SQUARE_LAT, lon: UNION_SQUARE_LON });
     }
   
-    // If no valid stored location, proceed with geolocation or fallback
-    if (!locationServicesEnabled && "geolocation" in navigator) {
+    // 2) Try to get geolocation, which will override the above if successful
+    if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const newLat = position.coords.latitude;
-          const newLon = position.coords.longitude;
-  
-          if (isWithinNYC(newLat, newLon)) {
-            setLocation({ lat: newLat, lon: newLon });
-            setLocationServicesEnabled(true);
-            setIsOutsideNYC(false);
-          } else {
-            handleOutsideNYC(newLat, newLon);
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          if (isWithinNYC(latitude, longitude)) {
+            setLocation({ lat: latitude, lon: longitude });
+            // Update localStorage with new position
+            localStorage.setItem("savedLat", String(latitude));
+            localStorage.setItem("savedLon", String(longitude));
           }
         },
         (error) => {
-          handleLocationError();
+          // On geolocation error, we keep the localStorage value 
+          // or Union Square that we already set above
+          console.log('Geolocation error:', error);
+        },
+        // Add options to prevent timeout issues
+        {
+          maximumAge: 30000,        // Accept positions up to 30 seconds old
+          timeout: 27000,           // Wait up to 27 seconds for position
+          enableHighAccuracy: false // Don't need high accuracy, speeds up response
         }
       );
-    } else {
-      setDefaultLocation();
     }
-  }, []);
+  }, [setLocation]);
 
 useEffect(() => {
   if (selectedStop) {
@@ -328,11 +333,15 @@ useEffect(() => {
   };
 
   const handleOutsideNYC = async (lat: number, lon: number) => {
-    const address = await getAddressFromCoords(lat, lon);
-    setUserLocation(address || "Unknown location");
-    setLocationServicesEnabled(true);
-    setIsOutsideNYC(true);
-    setDefaultLocation();
+    console.log("Outside NYC coords:", lat, lon);
+    // Only revert if we have no saved location
+    const savedLat = localStorage.getItem("savedLat");
+    const savedLon = localStorage.getItem("savedLon");
+    const hasSavedLocation = savedLat && savedLon;
+  
+    if (!hasSavedLocation) {
+      setDefaultLocation(); // fallback to Union Square
+    }
   };
 
   const handleLocationError = () => {
