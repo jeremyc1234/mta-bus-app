@@ -191,16 +191,9 @@ const [addressSuggestions, setAddressSuggestions] = useState<Array<{
   const handleSelectChange = (selectedOption: LocationSelectOption | null) => {
     setSelectedValue(selectedOption);
     if (selectedOption) {
-      const newLabel = selectedOption.label;
-      setInputValue(newLabel);
-      localStorage.setItem('dropdownInputValue', newLabel);
+      setInputValue(selectedOption.label); // Ensure inputValue updates with label
+      localStorage.setItem('dropdownInputValue', selectedOption.label);
       localStorage.setItem('selectedLocation', JSON.stringify(selectedOption));
-    }
-    
-    if (selectedOption?.value && 
-        typeof selectedOption.value.lat === 'number' && 
-        typeof selectedOption.value.lon === 'number') {
-      setIsLocationChanging(true);
       
       setLocation({
         lat: selectedOption.value.lat,
@@ -213,6 +206,12 @@ const [addressSuggestions, setAddressSuggestions] = useState<Array<{
       });
     }
   };
+
+  useEffect(() => {
+    if (selectedValue) {
+      setInputValue(selectedValue.label);
+    }
+  }, [selectedValue]);
 
   
   const handleKeyDown = (event: React.KeyboardEvent) => {

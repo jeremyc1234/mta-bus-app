@@ -74,6 +74,7 @@ const HomeContent = () => {
 
   const [locationServicesEnabled, setLocationServicesEnabled] = useState(false);
   const [isBannerVisible, setIsBannerVisible] = useState<boolean>(true);
+  const [isIssueBannerVisible, setIsIssueBannerVisible] = useState<boolean>(true);
   const [selectedStop, setSelectedStop] = useState<string | null>(null);
 
   const [data, setData] = useState<any>(null);
@@ -1177,7 +1178,70 @@ useEffect(() => {
         <p>Loading bus data...</p>
       </div>
     }>
-
+<div style={{ 
+      display: "flex", 
+      flexDirection: "column",
+      minHeight: "100vh",
+    }}>
+      {/* Location Services Banner */}
+      {isBannerVisible && windowWidth !== null && (
+  <div style={{
+    backgroundColor: "rgba(255, 204, 187, 0.9)",
+    color: "#FF3632",
+    padding: "8px 12px",
+    borderRadius: "8px",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    position: "fixed",
+    top: "10px",
+    left: "50%",
+    transform: `translate(-50%, ${isFadingOut ? -20 : 0}px)`,
+    zIndex: 2000,
+    textAlign: "center",
+    width: windowWidth < 768 ? "90%" : "auto",
+    maxWidth: windowWidth < 768 ? "90%" : "none", // Remove maxWidth for desktop
+    boxSizing: "border-box",
+    transition: "opacity 1s ease-out, transform 1s ease-out",
+    opacity: isFadingOut ? 0 : 1,
+    fontSize: "0.95rem",
+    boxShadow: "0 2px 10px rgba(0, 0, 0, 0.1)",
+    justifyContent: "center",
+    // Text wrapping styles based on screen size
+    whiteSpace: windowWidth < 768 ? "normal" : "nowrap",
+    lineHeight: windowWidth < 768 ? "1.4" : "normal",
+  }}>
+    <span style={{
+      fontWeight: "bold",
+      textAlign: "center",
+      flex: "0 1 auto",
+      // Text wrapping styles based on screen size
+      whiteSpace: windowWidth < 768 ? "normal" : "nowrap",
+      wordWrap: windowWidth < 768 ? "break-word" : "normal",
+    }}>
+      {!locationServicesEnabled
+        ? "📍 Please turn on location services to get information for the closest stops to you!"
+        : isOutsideNYC
+          ? `📍 You're currently in ${userLocation}. Since you're outside NYC, please select from the dropdown or type in an NYC address.`
+          : "📍 Please turn on location services to get information for the closest stops to you!"}
+    </span>
+    <button
+      onClick={() => setIsBannerVisible(false)}
+      style={{
+        background: "none",
+        border: "none",
+        fontSize: "1.2rem",
+        cursor: "pointer",
+        marginLeft: "8px",
+        color: "#FF3632",
+        flexShrink: 0,
+        padding: "0 8px"
+      }}
+    >
+      ×
+    </button>
+  </div>
+)}
       <BusPopupProvider>
         {isAlertPopupOpen && serviceAlert && (
           <ServiceAlertPopup
@@ -1211,65 +1275,6 @@ useEffect(() => {
                 justifyContent: "flex-start",
                 gap: "8px",
               }}>
-
-                {isBannerVisible && windowWidth !== null && (
-                  <div
-                    style={{
-                      backgroundColor: "rgba(255, 204, 187, 0.9)",
-                      color: "#FF3632",
-                      padding: "8px 12px",
-                      borderRadius: "8px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      position: "absolute",
-                      top: "20px",
-                      left: "50%",
-                      transform: `translate(-50%, ${isFadingOut ? -20 : 0}px)`,
-                      zIndex: 1500,
-                      textAlign: "center",
-                      width: windowWidth < 768 ? "90%" : "auto",
-                      maxWidth: windowWidth < 768 ? "100%" : "90%",
-                      boxSizing: "border-box",
-                      transition: "opacity 1s ease-out, transform 1s ease-out",
-                      opacity: isFadingOut ? 0 : 1,
-                      wordWrap: "break-word",
-                      whiteSpace: "normal",
-                      lineHeight: "1.4",
-                      fontSize: "0.95rem"
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontWeight: "bold",
-                        whiteSpace: "normal",
-                        wordWrap: "break-word",
-                        textAlign: "center",
-                        flex: 1,
-                      }}
-                    >
-                      {!locationServicesEnabled
-                        ? "📍 Please turn on location services to get information for the closest stops to you!"
-                        : isOutsideNYC
-                          ? `📍 You're currently in ${userLocation}. Since you're outside NYC, please select from the dropdown or type in an NYC address.`
-                          : "📍 Please turn on location services to get information for the closest stops to you!"}
-                    </span>
-                    <button
-                      onClick={() => setIsBannerVisible(false)}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        fontSize: "1.2rem",
-                        cursor: "pointer",
-                        marginLeft: "8px",
-                        color: "#FF3632",
-                        flexShrink: 0,
-                      }}
-                    >
-                      ×
-                    </button>
-                  </div>
-                )}
                 <div style={{
                   overflow: "hidden",
                   maxWidth: "100vw",
@@ -1304,24 +1309,53 @@ useEffect(() => {
                       )}
                       <span>(next refresh in <span ref={timerRef}>{timeRemaining}</span>s)</span>
                     </p>
-                    <p style={{
-        textAlign: "center",
-        color: "red",
-        fontStyle: "italic",
-        marginTop: "4px",
-        fontSize: "0.9rem",
-        lineHeight: "1.2"
-      }}>
-        There is a known issue where the MTA Bus Time API occasionally sends the wrong direction, causing the stops list to be incorrect in the popup. Please use this data with caution and reference the 
-        <a 
-          href="https://bustime.mta.info/" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          style={{ color: "red", textDecoration: "underline", marginLeft: "4px" }}
-        >
-          MTA website
-        </a> if needed.
-      </p>
+                    {isIssueBannerVisible && (
+  <div
+    style={{
+      textAlign: 'center',
+      backgroundColor: '#FFEEEE',
+      padding: '4px 8px',
+      marginTop: '4px',
+      overflow: 'hidden',
+      boxSizing: 'border-box',
+      color: 'red',
+      position: 'relative',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }}
+  >
+    <p className="issue-text" style={{ margin: '4px 24px' }}>
+      There is a known issue where the MTA Bus Time API occasionally sends the wrong direction when clicking into a bus tile, causing the stops list to be incorrect in the popup. Please use this data with caution and reference the 
+      <a 
+        href="https://bustime.mta.info/" 
+        target="_blank" 
+        rel="noopener noreferrer"
+        style={{ color: "red", textDecoration: "underline", marginLeft: "4px" }}
+      >
+        MTA website
+      </a> if needed.
+    </p>
+    <button
+      onClick={() => setIsIssueBannerVisible(false)}
+      style={{
+        position: 'absolute',
+        right: '8px',
+        background: 'none',
+        border: 'none',
+        color: 'red',
+        cursor: 'pointer',
+        fontSize: '18px',
+        padding: '4px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      ×
+    </button>
+  </div>
+)}
                   </div>
                 )}
 
@@ -1863,6 +1897,7 @@ useEffect(() => {
           )}
         </BusContent>
       </BusPopupProvider>
+      </div>
     </Suspense>
   );
 }
