@@ -269,7 +269,7 @@ const timerRef = useRef<HTMLSpanElement>(null);
     if (!geolocationAttempted) {
       fallbackLocation(); // ✅ Safe call to a standard function
     }
-  }, [setLocation]);
+  }, [setLocation, UNION_SQUARE_LAT, UNION_SQUARE_LON]);
 
 useEffect(() => {
   if (selectedStop) {
@@ -290,7 +290,7 @@ useEffect(() => {
       }
     }
   }
-}, [selectedStop]);
+}, [selectedStop, setLocation]);
 
   useEffect(() => {
     console.log('🛠️ Manual Scroll Check Trigger');
@@ -305,28 +305,26 @@ useEffect(() => {
 
   useLayoutEffect(() => {
     console.log('🛠️ useLayoutEffect Mounted: Adding Scroll Listeners');
-
-    const setupScrollListener = () => {
-      const el = scrollContainerRef.current;
-      if (el) {
-        console.log('✅ Scroll Container Ready');
-        el.addEventListener('scroll', checkScrollable);
-        window.addEventListener('resize', checkScrollable);
-        checkScrollable(); // Ensure initial state is checked
-      } else {
-        console.warn('⚠️ scrollContainerRef is still null in useLayoutEffect');
-      }
-    };
-
-    setupScrollListener();
-
+  
+    const el = scrollContainerRef.current; // Save the ref value at the beginning
+  
+    if (el) {
+      console.log('✅ Scroll Container Ready');
+      el.addEventListener('scroll', checkScrollable);
+      window.addEventListener('resize', checkScrollable);
+      checkScrollable(); // Ensure initial state is checked
+    } else {
+      console.warn('⚠️ scrollContainerRef is still null in useLayoutEffect');
+    }
+  
     return () => {
-      if (scrollContainerRef.current) {
-        scrollContainerRef.current.removeEventListener('scroll', checkScrollable);
+      if (el) { // Use the saved ref value
+        el.removeEventListener('scroll', checkScrollable);
       }
       window.removeEventListener('resize', checkScrollable);
     };
   }, []);
+  
   const checkServiceAlert = async (routeId: string) => {
     try {
       const cleanRouteId = routeId.replace(/MTA NYCT_|MTABC_/g, '').toUpperCase();
@@ -399,7 +397,7 @@ useEffect(() => {
       
       fetchData();
     }
-  }, [location]);
+  }, [location, isRefreshing]);
 
   useEffect(() => {
     setIsMobile(window.matchMedia("(pointer: coarse)").matches);

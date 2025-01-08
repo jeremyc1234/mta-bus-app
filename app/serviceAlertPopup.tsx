@@ -53,7 +53,7 @@
             <React.Fragment key={index}>
               <br />
               <br />
-              <strong>🙋 What's happening?</strong>
+              <strong>🙋 What&apos;s happening?</strong>
             </React.Fragment>
           );
         } else if (segment === "Note:") {
