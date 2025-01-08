@@ -131,7 +131,7 @@ if (!matchedDirection) {
 
     console.log('🧭 [DIRECTION MATCH] Matched Direction:', matchedDirection);
 
-    let stopsForMatchedDirection = matchedDirection
+    const stopsForMatchedDirection = matchedDirection
       ? stopsByDirection[matchedDirection] || []
       : [];
 

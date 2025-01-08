@@ -202,54 +202,10 @@ const timerRef = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     let geolocationAttempted = false;
   
-    // 1. Try Geolocation first
-    if ("geolocation" in navigator) {
-      geolocationAttempted = true;
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          if (isWithinNYC(latitude, longitude)) {
-            setLocation({ lat: latitude, lon: longitude });
-            // Update localStorage with new geolocation
-            localStorage.setItem("savedLat", String(latitude));
-            localStorage.setItem("savedLon", String(longitude));
-            
-            // Update the dropdown selection to match geolocation
-            const geoLocation = {
-              value: {
-                lat: latitude,
-                lon: longitude,
-                label: `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`
-              },
-              label: `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`,
-              isCustomAddress: false
-            };
-            localStorage.setItem('selectedLocation', JSON.stringify(geoLocation));
-          }
-        },
-        (error) => {
-          console.log('Geolocation error:', error);
-          // On geolocation error, fall back to saved location or Union Square
-          useFallbackLocation();
-        },
-        {
-          maximumAge: 30000,
-          timeout: 27000,
-          enableHighAccuracy: false
-        }
-      );
-    }
-  
-    // If geolocation isn't available, use fallback immediately
-    if (!geolocationAttempted) {
-      useFallbackLocation();
-    }
-  
-    function useFallbackLocation() {
-      // 2. Try saved location
+    const fallbackLocation = () => {
       const savedLat = localStorage.getItem("savedLat");
       const savedLon = localStorage.getItem("savedLon");
-      
+  
       if (savedLat && savedLon) {
         const latNum = parseFloat(savedLat);
         const lonNum = parseFloat(savedLon);
@@ -257,10 +213,7 @@ const timerRef = useRef<HTMLSpanElement>(null);
           setLocation({ lat: latNum, lon: lonNum });
         }
       } else {
-        // 3. Fall back to Union Square if no saved location
         setLocation({ lat: UNION_SQUARE_LAT, lon: UNION_SQUARE_LON });
-        
-        // Set Union Square as the default in localStorage
         const defaultLocation = BUS_STOP_LOCATIONS[0];
         const defaultOption = {
           value: {
@@ -273,6 +226,33 @@ const timerRef = useRef<HTMLSpanElement>(null);
         };
         localStorage.setItem('selectedLocation', JSON.stringify(defaultOption));
       }
+    };
+  
+    if ("geolocation" in navigator) {
+      geolocationAttempted = true;
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          if (isWithinNYC(latitude, longitude)) {
+            setLocation({ lat: latitude, lon: longitude });
+            localStorage.setItem("savedLat", String(latitude));
+            localStorage.setItem("savedLon", String(longitude));
+          }
+        },
+        (error) => {
+          console.log('Geolocation error:', error);
+          fallbackLocation(); // ✅ Safe call to a standard function
+        },
+        {
+          maximumAge: 30000,
+          timeout: 27000,
+          enableHighAccuracy: false,
+        }
+      );
+    }
+  
+    if (!geolocationAttempted) {
+      fallbackLocation(); // ✅ Safe call to a standard function
     }
   }, [setLocation]);
 

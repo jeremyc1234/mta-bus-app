@@ -90,7 +90,7 @@ const BusRoutePopup = memo(({
   );
 
   const adjustedStops = useMemo(() => {
-    let stopsToUse = [...stops];
+    const stopsToUse = [...stops];
     return stopsToUse;
   }, [stops]);
 
