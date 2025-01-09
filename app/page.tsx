@@ -1879,7 +1879,8 @@ useEffect(() => {
 
                                                 style={{
                                                   margin: "8px 0",
-                                                  background: "linear-gradient(145deg, #ffffff 50%, #f0f0f0 100%)", // Subtle gradient from white to light gray
+                                                  // background: "linear-gradient(145deg, #ffffff 50%, #f0f0f0 100%)", // Subtle gradient from white to light gray
+                                                  background: "white",
                                                   borderRadius: "8px",
                                                   boxShadow: "inset 0 2px 4px rgba(255, 255, 255, 100), 0 2px 8px rgba(0, 0, 0, 0.15)", // Combines inner highlight and outer shadow
                                                   padding: "12px",
@@ -1890,6 +1891,30 @@ useEffect(() => {
                                                   overflow: "hidden", // To contain the pseudo-element
                                                 }}
                                                 >
+                                                  <div style={{
+    position: "absolute",
+    top: "8px",
+    right: "8px",
+    width: "20px",
+    height: "20px"
+  }}>
+    <img 
+      src="/icons/info.svg" 
+      alt="Info"
+      style={{
+        width: "100%",
+        height: "100%",
+        opacity: 0.6,
+        transition: "opacity 0.2s"
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.opacity = "1";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.opacity = "0.6";
+      }}
+    />
+  </div>
                                                   <div style={{
                                                     fontWeight: "bold",
                                                     color: stopsAway <= 1 ? "green" : stopsAway <= 5 ? "orange" : "inherit"
