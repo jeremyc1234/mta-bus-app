@@ -29,30 +29,7 @@ interface LocationDropdownProps {
   isLocationChanging: boolean;
   setIsLocationChanging: (value: boolean) => void;
 }  
-const ClearIndicator = (props: any) => {
-  const {
-    children = "×", // Default is an "x"
-    getStyles,
-    innerRef,
-    innerProps,
-  } = props;
-  return (
-    <div
-      {...innerProps}
-      ref={innerRef}
-      style={{
-        ...getStyles("clearIndicator", props),
-        cursor: "pointer",
-        padding: "0 8px",
-        fontSize: "1.2rem",
-        color: "#888",
-      }}
-      title="Clear"
-    >
-      {children}
-    </div>
-  );
-};
+
 const LocationDropdown: React.FC<LocationDropdownProps> = ({ 
   onLocationChange,
   isLocationChanging,
@@ -212,11 +189,36 @@ const [addressSuggestions, setAddressSuggestions] = useState<Array<{
   }, [inputValue, setLocation]);
 
   const handleInputChange = (newVal: string, { action }: { action: string }) => {
-    if (action === 'input-change') {
+    if (action === "input-change") {
       setInputValue(newVal);
       setMenuIsOpen(true); // Open the dropdown when input changes
+    } else if (action === "clear") {
+      // Clear only the visual input
+      setInputValue(""); 
+      setMenuIsOpen(false); // Optionally close the menu
     }
   };
+
+  const ClearIndicator = (props: any) => {
+    const { innerRef, innerProps } = props;
+    return (
+      <div
+        {...innerProps}
+        ref={innerRef}
+        style={{
+          cursor: "pointer",
+          padding: "0 8px",
+          fontSize: "1.2rem",
+          color: "#888",
+        }}
+        title="Clear"
+        onClick={() => handleInputChange("", { action: "clear" })}
+      >
+        ×
+      </div>
+    );
+  };
+  
 
   const handleSelectChange = async (selectedOption: LocationSelectOption | null) => {
     if (!selectedOption) {

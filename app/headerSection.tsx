@@ -67,7 +67,7 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
                 </span>
                 <Suspense fallback={<div>Loading Location Dropdown...</div>}>
                     <LocationDropdown
-                        selectedStop={selectedStop}
+                        // selectedStop={selectedStop}
                         onLocationChange={onLocationChange}
                         isLocationChanging={isLocationChanging}
                         setIsLocationChanging={setIsLocationChanging}
