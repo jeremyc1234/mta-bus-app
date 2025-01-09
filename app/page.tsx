@@ -9,7 +9,13 @@ import NavigationButtons from './navigationButtons';
 import { BUS_STOP_LOCATIONS } from "./data/busstops";
 import { useLocation } from "./locationContext";
 import ScrollableTile from "./scrollableTile";
-import Header from "./header";
+
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'MTA Bus Finder | Real-time NYC Bus Tracking',
+  description: 'Track New York City buses in real-time with MTA Bus Finder. Get accurate arrival times and bus locations.',
+};
 
 const inter = Inter({ subsets: ['latin'] });
 
