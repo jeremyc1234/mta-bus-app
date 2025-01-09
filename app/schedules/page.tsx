@@ -3,12 +3,6 @@
 import React, { useState, useRef, useEffect, JSX } from 'react';
 import { useRouter } from "next/navigation";
 import { Search } from 'lucide-react';
-import { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'NYC Bus Schedules | MTA Bus Finder',
-  description: 'Find real-time New York City bus schedules, stop locations, and arrival times for all boroughs.',
-};
 
 type Borough = 'Bronx' | 'Brooklyn' | 'Queens' | 'Manhattan' | 'Staten Island';
 type RouteInfo = {

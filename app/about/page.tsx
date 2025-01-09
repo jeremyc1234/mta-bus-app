@@ -1,12 +1,6 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'About | MTA Bus Finder',
-  description: 'Learn about MTA Bus Finder and how we help you track New York City buses in real-time.',
-};
 
 export default function About() {
   const [faqOpen, setFaqOpen] = useState<Record<number, boolean>>({});
