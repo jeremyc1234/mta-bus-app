@@ -193,9 +193,9 @@ const [addressSuggestions, setAddressSuggestions] = useState<Array<{
       setInputValue(newVal);
       setMenuIsOpen(true); // Open the dropdown when input changes
     } else if (action === "clear") {
-      // Clear only the visual input
       setInputValue(""); 
-      setMenuIsOpen(false); // Optionally close the menu
+      setSelectedValue(null);
+      setMenuIsOpen(true); // Keep the menu open when clearing
     }
   };
 
@@ -221,11 +221,11 @@ const [addressSuggestions, setAddressSuggestions] = useState<Array<{
   
 
   const handleSelectChange = async (selectedOption: LocationSelectOption | null) => {
-    if (!selectedOption) {
-      // Clear the input and keep the dropdown open
-      setInputValue('');
-      return;
-    }
+    // if (!selectedOption) {
+    //   // Clear the input and keep the dropdown open
+    //   setInputValue('');
+    //   return;
+    // }
     if (selectedOption) {
       // Update all states in one batch
       await Promise.all([
