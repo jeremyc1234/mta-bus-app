@@ -75,7 +75,8 @@ const HomeContent = () => {
   const [locationServicesEnabled, setLocationServicesEnabled] = useState(false);
   const [isBannerVisible, setIsBannerVisible] = useState<boolean>(true);
   const [isIssueBannerVisible, setIsIssueBannerVisible] = useState<boolean>(true);
-  
+  const [isIssueBannerFadingOut, setIsIssueBannerFadingOut] = useState(false);
+
   const [selectedStop, setSelectedStop] = useState<string | null>(null);
 
   const [data, setData] = useState<any>(null);
@@ -193,7 +194,24 @@ const timerRef = useRef<HTMLSpanElement>(null);
       localStorage.setItem("savedLon", location.lon.toString());
     }
   }, [location.lat, location.lon]);
-
+  const fallbackLocation = () => {
+    const savedLat = localStorage.getItem("savedLat");
+    const savedLon = localStorage.getItem("savedLon");
+  
+    if (savedLat && savedLon) {
+      const latNum = parseFloat(savedLat);
+      const lonNum = parseFloat(savedLon);
+      if (!isNaN(latNum) && !isNaN(lonNum)) {
+        // Set both location context and locationServicesEnabled in one go
+        setLocation({ lat: latNum, lon: lonNum });
+        setLocationServicesEnabled(true);
+        return; // Exit early if we have valid saved coordinates
+      }
+    }
+    
+    // Only fall back to Union Square if no valid saved location
+    setDefaultLocation();
+  };
   const checkScrollable = () => {
     const el = scrollContainerRef.current;
     console.log('🛠️ checkScrollable Triggered');
@@ -220,38 +238,16 @@ const timerRef = useRef<HTMLSpanElement>(null);
     let geolocationAttempted = false;
     let watchId: number | null = null;
   
-    const fallbackLocation = () => {
-      const savedLat = localStorage.getItem("savedLat");
-      const savedLon = localStorage.getItem("savedLon");
-  
-      if (savedLat && savedLon) {
-        const latNum = parseFloat(savedLat);
-        const lonNum = parseFloat(savedLon);
-        if (!isNaN(latNum) && !isNaN(lonNum)) {
-          setLocation({ lat: latNum, lon: lonNum });
-          setLocationServicesEnabled(true);
-        }
-      } else {
-        setLocation({ lat: UNION_SQUARE_LAT, lon: UNION_SQUARE_LON });
-        const defaultLocation = BUS_STOP_LOCATIONS[0];
-        const defaultOption = {
-          value: {
-            lat: defaultLocation.lat,
-            lon: defaultLocation.lon,
-            label: defaultLocation.label,
-          },
-          label: defaultLocation.label,
-          isCustomAddress: false,
-        };
-        localStorage.setItem('selectedLocation', JSON.stringify(defaultOption));
-      }
-    };
+    // First handle any saved location immediately
+    fallbackLocation();
   
     const handlePositionUpdate = (pos: GeolocationPosition) => {
       const { latitude, longitude } = pos.coords;
+      setLocationServicesEnabled(true);
+      
       if (isWithinNYC(latitude, longitude)) {
         setLocation({ lat: latitude, lon: longitude });
-        setLocationServicesEnabled(true);
+        setIsOutsideNYC(false);
         localStorage.setItem("savedLat", String(latitude));
         localStorage.setItem("savedLon", String(longitude));
       } else {
@@ -268,7 +264,7 @@ const timerRef = useRef<HTMLSpanElement>(null);
         (error) => {
           console.log('Geolocation error:', error);
           setLocationServicesEnabled(false);
-          fallbackLocation();
+          // Don't call fallbackLocation here since we already did it above
         },
         {
           maximumAge: 30000,
@@ -290,10 +286,6 @@ const timerRef = useRef<HTMLSpanElement>(null);
           enableHighAccuracy: false,
         }
       );
-    }
-  
-    if (!geolocationAttempted) {
-      fallbackLocation();
     }
   
     // Cleanup function
@@ -394,6 +386,14 @@ useEffect(() => {
 
   const handleOutsideNYC = async (lat: number, lon: number) => {
     console.log("Outside NYC coords:", lat, lon);
+    setIsOutsideNYC(true); // Set the outside NYC state
+    
+    // Get the location name
+    const locationName = await getAddressFromCoords(lat, lon);
+    if (locationName) {
+      setUserLocation(locationName);
+    }
+    
     // Only revert if we have no saved location
     const savedLat = localStorage.getItem("savedLat");
     const savedLon = localStorage.getItem("savedLon");
@@ -403,6 +403,7 @@ useEffect(() => {
       setDefaultLocation(); // fallback to Union Square
     }
   };
+  
 
   const handleLocationError = () => {
     setLocationServicesEnabled(false);
@@ -896,6 +897,26 @@ useEffect(() => {
   }, [isBannerVisible]);
 
   useEffect(() => {
+    if (isIssueBannerVisible) {
+      // Start fade-out animation at 28 seconds
+      const fadeTimer = setTimeout(() => {
+        setIsIssueBannerFadingOut(true);
+      }, 28000);
+  
+      // Fully hide the banner at 30 seconds
+      const hideTimer = setTimeout(() => {
+        setIsIssueBannerVisible(false);
+        setIsIssueBannerFadingOut(false); // Reset fade-out state
+      }, 30000);
+  
+      return () => {
+        clearTimeout(fadeTimer);
+        clearTimeout(hideTimer);
+      };
+    }
+  }, [isIssueBannerVisible]);
+
+  useEffect(() => {
     if (typeof window !== "undefined") {
       setIsMobile(window.matchMedia("(pointer: coarse)").matches);
     }
@@ -1058,15 +1079,7 @@ useEffect(() => {
     }, 1000);
     return () => clearInterval(ticker);
   }, [location.lat, location.lon]);
-  useEffect(() => {
-    console.log('📍 Banner state:', {
-      locationServicesEnabled,
-      isOutsideNYC,
-      userLocation,
-      isBannerVisible
-    });
-  }, [locationServicesEnabled, isOutsideNYC, userLocation, isBannerVisible]);
-
+  
   if (error) {
     return (
       <div style={{ padding: 20, textAlign: "center", fontFamily: "Helvetica, sans-serif" }}>
@@ -1241,31 +1254,35 @@ useEffect(() => {
     transform: `translate(-50%, ${isFadingOut ? -20 : 0}px)`,
     zIndex: 2000,
     textAlign: "center",
-    width: windowWidth < 768 ? "90%" : "auto",
-    maxWidth: windowWidth < 768 ? "90%" : "none", // Remove maxWidth for desktop
+    width: windowWidth < 768 ? "90%" : "max-content", // Change from "auto" to "max-content"
+    maxWidth: "90%", // Add this to ensure it never overflows the screen
+    whiteSpace: "normal", // Remove the conditional, always allow wrapping
+    lineHeight: "1.4",
     boxSizing: "border-box",
     transition: "opacity 1s ease-out, transform 1s ease-out",
     opacity: isFadingOut ? 0 : 1,
     fontSize: "0.95rem",
     boxShadow: "0 2px 10px rgba(0, 0, 0, 0.1)",
     justifyContent: "center",
-    // Text wrapping styles based on screen size
-    whiteSpace: windowWidth < 768 ? "normal" : "nowrap",
-    lineHeight: windowWidth < 768 ? "1.4" : "normal",
   }}>
     <span style={{
       fontWeight: "bold",
       textAlign: "center",
       flex: "0 1 auto",
-      // Text wrapping styles based on screen size
-      whiteSpace: windowWidth < 768 ? "normal" : "nowrap",
-      wordWrap: windowWidth < 768 ? "break-word" : "normal",
+      whiteSpace: "normal", // Remove the conditional, always allow wrapping
+      wordWrap: "break-word", // Remove the conditional, always allow word breaking
+      overflowWrap: "break-word", // Add this to help with wrapping
+      hyphens: "auto",
     }}>
-      {!locationServicesEnabled
-        ? "📍 Please turn on location services to get information for the closest stops to you!"
-        : isOutsideNYC
-          ? `📍 You're currently in ${userLocation}. Since you're outside NYC, please select from the dropdown or type in an NYC address.`
-          : "📍 Please turn on location services to get information for the closest stops to you!"}
+      {!locationServicesEnabled ? (
+        "📍 Please turn on location services to get information for the closest stops to you!"
+      ) : isOutsideNYC ? (
+        userLocation ? 
+          `📍 You're currently in ${userLocation}. Since you're outside NYC, please select from the dropdown or type in an NYC address.` :
+          "📍 You're currently outside NYC. Please select from the dropdown or type in an NYC address."
+      ) : (
+        "📍 Please turn on location services to get information for the closest stops to you!"
+      )}
     </span>
     <button
       onClick={() => setIsBannerVisible(false)}
@@ -1352,22 +1369,26 @@ useEffect(() => {
                     </p>
                     {isIssueBannerVisible && (
   <div
-    style={{
-      textAlign: 'center',
-      backgroundColor: '#FFEEEE',
-      padding: '4px 8px',
-      marginTop: '4px',
-      overflow: 'hidden',
-      boxSizing: 'border-box',
-      color: 'red',
-      position: 'relative',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-    }}
-  >
+  style={{
+    textAlign: 'center',
+    backgroundColor: '#FFEEEE',
+    padding: '4px 8px',
+    marginTop: '4px',
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+    color: 'red',
+    position: 'relative',
+    display: isIssueBannerVisible ? 'flex' : 'none',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transform: `translateY(${isIssueBannerFadingOut ? -20 : 0}px)`,
+    opacity: isIssueBannerFadingOut ? 0 : 1,
+    transition: 'opacity 1s ease-out, transform 1s ease-out',
+  }}
+>
+
     <p className="issue-text" style={{ margin: '4px 24px' }}>
-      There is a known issue where the MTA Bus Time API occasionally sends the wrong direction when clicking into a bus tile, causing the stops list to be incorrect in the popup. Please use this data with caution and reference the 
+      There is a known issue where the MTA Bus Time API occasionally sends stops in the wrong direction, causing the stops list to be incorrect in the popup. Please use this data with caution and reference the 
       <a 
         href="https://bustime.mta.info/" 
         target="_blank" 
