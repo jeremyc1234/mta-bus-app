@@ -45,7 +45,7 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
   });
   const [isAddressMode, setIsAddressMode] = useState(false);
   const { setLocation } = useLocation();
-  console.log("📍 isLocationChanging in LocationDropdown:", isLocationChanging);
+  // console.log("📍 isLocationChanging in LocationDropdown:", isLocationChanging);
   const initializeDefaultRef = useRef(false);
   const onLocationChangeRef = useRef(onLocationChange);
   const [menuIsOpen, setMenuIsOpen] = useState(false);

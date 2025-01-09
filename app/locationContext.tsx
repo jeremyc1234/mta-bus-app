@@ -24,13 +24,13 @@ export function LocationProvider({ children }: { children: ReactNode }) {
               const latNum = parseFloat(savedLat);
               const lonNum = parseFloat(savedLon);
               if (!isNaN(latNum) && !isNaN(lonNum)) {
-                  console.log("🏁 LocationContext initializing with saved location:", { latNum, lonNum });
+                  // console.log("🏁 LocationContext initializing with saved location:", { latNum, lonNum });
                   return { lat: latNum, lon: lonNum };
               }
           }
       }
       
-      console.log("🏁 LocationContext initializing with Union Square default");
+      // console.log("🏁 LocationContext initializing with Union Square default");
       return {
           lat: 40.7359,
           lon: -73.9906

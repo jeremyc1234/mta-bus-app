@@ -9,6 +9,7 @@ import NavigationButtons from './navigationButtons';
 import { BUS_STOP_LOCATIONS } from "./data/busstops";
 import { useLocation } from "./locationContext";
 import ScrollableTile from "./scrollableTile";
+import Header from "./header";
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -74,7 +75,7 @@ const HomeContent = () => {
 
   const [locationServicesEnabled, setLocationServicesEnabled] = useState(false);
   const [isBannerVisible, setIsBannerVisible] = useState<boolean>(true);
-  const [isIssueBannerVisible, setIsIssueBannerVisible] = useState<boolean>(true);
+  const [isIssueBannerVisible, setIsIssueBannerVisible] = useState<boolean>(false);
   const [isIssueBannerFadingOut, setIsIssueBannerFadingOut] = useState(false);
 
   const [selectedStop, setSelectedStop] = useState<string | null>(null);
@@ -139,16 +140,16 @@ const timerRef = useRef<HTMLSpanElement>(null);
   };
 
   const getAddressFromCoords = async (lat: number, lon: number) => {
-    console.log('🌍 Starting geocoding for coordinates:', { lat, lon });
+    // console.log('🌍 Starting geocoding for coordinates:', { lat, lon });
     try {
       const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
-      console.log('🔑 API Key present:', !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
+      // console.log('🔑 API Key present:', !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
 
       const response = await fetch(url);
-      console.log('📡 Geocoding API response status:', response.status);
+      // console.log('📡 Geocoding API response status:', response.status);
 
       const data = await response.json();
-      console.log('📍 Geocoding API response:', data);
+      // console.log('📍 Geocoding API response:', data);
 
       if (data.status === 'REQUEST_DENIED') {
         console.error('❌ API Request Denied:', data.error_message);
@@ -175,11 +176,11 @@ const timerRef = useRef<HTMLSpanElement>(null);
         }
 
         const formattedLocation = `${city}, ${state}`;
-        console.log('✅ Found location:', formattedLocation);
+        // console.log('✅ Found location:', formattedLocation);
         return formattedLocation;
       }
 
-      console.log('❌ No results found in geocoding response');
+      // console.log('❌ No results found in geocoding response');
       return null;
     } catch (error) {
       console.error('❌ Geocoding error:', error);
@@ -195,7 +196,7 @@ const timerRef = useRef<HTMLSpanElement>(null);
     }
   }, [location.lat, location.lon]);
   const fallbackLocation = () => {
-    console.log("🔍 Checking for saved location in fallbackLocation...");
+    // console.log("🔍 Checking for saved location in fallbackLocation...");
     const savedLat = localStorage.getItem("savedLat");
     const savedLon = localStorage.getItem("savedLon");
   
@@ -203,14 +204,14 @@ const timerRef = useRef<HTMLSpanElement>(null);
       const latNum = parseFloat(savedLat);
       const lonNum = parseFloat(savedLon);
       if (!isNaN(latNum) && !isNaN(lonNum)) {
-        console.log("✅ Using saved location:", { lat: latNum, lon: lonNum });
+        // console.log("✅ Using saved location:", { lat: latNum, lon: lonNum });
         setLocation({ lat: latNum, lon: lonNum });
         setLocationServicesEnabled(false);
         return true;
       }
-      console.log("❌ Saved coordinates are invalid:", { savedLat, savedLon });
+      // console.log("❌ Saved coordinates are invalid:", { savedLat, savedLon });
     } else {
-      console.log("❌ No saved location found in localStorage");
+      // console.log("❌ No saved location found in localStorage");
     }
     
     console.log("⚠️ Falling back to Union Square in fallbackLocation");
@@ -219,7 +220,7 @@ const timerRef = useRef<HTMLSpanElement>(null);
   };
   const checkScrollable = () => {
     const el = scrollContainerRef.current;
-    console.log('🛠️ checkScrollable Triggered');
+    // console.log('🛠️ checkScrollable Triggered');
     if (el) {
       console.log('🛠️ Scroll Container Found:', {
         scrollLeft: el.scrollLeft,
@@ -230,7 +231,7 @@ const timerRef = useRef<HTMLSpanElement>(null);
       const canScrollLeft = el.scrollLeft > 0;
       const canScrollRight = el.scrollWidth > el.clientWidth + el.scrollLeft;
 
-      console.log('🛠️ Scroll State:', { canScrollLeft, canScrollRight });
+      // console.log('🛠️ Scroll State:', { canScrollLeft, canScrollRight });
 
       setIsScrollableLeft(canScrollLeft);
       setIsScrollableRight(canScrollRight);
@@ -243,52 +244,52 @@ const timerRef = useRef<HTMLSpanElement>(null);
     let geolocationAttempted = false;
     let watchId: number | null = null;
   
-    console.log("🚀 Starting location initialization...");
+    // console.log("🚀 Starting location initialization...");
     const usedSavedLocation = fallbackLocation();
-    console.log("📍 Used saved location?", usedSavedLocation);
+    // console.log("📍 Used saved location?", usedSavedLocation);
   
     const handlePositionUpdate = (pos: GeolocationPosition) => {
       const { latitude, longitude } = pos.coords;
-      console.log("📱 Got geolocation update:", { latitude, longitude });
+      // console.log("📱 Got geolocation update:", { latitude, longitude });
       setLocationServicesEnabled(true);
       
       if (isWithinNYC(latitude, longitude)) {
-        console.log("✅ Location is within NYC, using current position");
+        // console.log("✅ Location is within NYC, using current position");
         setLocation({ lat: latitude, lon: longitude });
         setIsOutsideNYC(false);
         localStorage.setItem("savedLat", String(latitude));
         localStorage.setItem("savedLon", String(longitude));
       } else {
-        console.log("🌎 Location is outside NYC, checking saved location...");
+        // console.log("🌎 Location is outside NYC, checking saved location...");
         const savedLat = localStorage.getItem("savedLat");
         const savedLon = localStorage.getItem("savedLon");
         if (savedLat && savedLon) {
           const latNum = parseFloat(savedLat);
           const lonNum = parseFloat(savedLon);
           if (!isNaN(latNum) && !isNaN(lonNum) && isWithinNYC(latNum, lonNum)) {
-            console.log("✅ Found valid saved NYC location, using it instead:", { latNum, lonNum });
+            // console.log("✅ Found valid saved NYC location, using it instead:", { latNum, lonNum });
             setLocation({ lat: latNum, lon: lonNum });
             setIsOutsideNYC(true);
             return;
           }
-          console.log("❌ Saved location invalid or outside NYC:", { latNum, lonNum });
+          // console.log("❌ Saved location invalid or outside NYC:", { latNum, lonNum });
         }
-        console.log("⚠️ Handling outside NYC case");
+        // console.log("⚠️ Handling outside NYC case");
         handleOutsideNYC(latitude, longitude);
       }
     };
   
     if ("geolocation" in navigator) {
-      console.log("📱 Geolocation is available");
+      // console.log("📱 Geolocation is available");
       geolocationAttempted = true;
       
       navigator.geolocation.getCurrentPosition(
         handlePositionUpdate,
         (error) => {
-          console.log('❌ Geolocation error:', error);
+          // console.log('❌ Geolocation error:', error);
           setLocationServicesEnabled(false);
           if (!usedSavedLocation) {
-            console.log("⚠️ No saved location and geolocation failed, falling back to Union Square");
+            // console.log("⚠️ No saved location and geolocation failed, falling back to Union Square");
             setDefaultLocation();
           }
         },
@@ -302,7 +303,7 @@ const timerRef = useRef<HTMLSpanElement>(null);
       watchId = navigator.geolocation.watchPosition(
         handlePositionUpdate,
         (error) => {
-          console.log('❌ Geolocation watch error:', error);
+          // console.log('❌ Geolocation watch error:', error);
           setLocationServicesEnabled(false);
         },
         {
@@ -312,11 +313,11 @@ const timerRef = useRef<HTMLSpanElement>(null);
         }
       );
     } else {
-      console.log("📱 Geolocation is not available");
+      // console.log("📱 Geolocation is not available");
     }
   
     if (!geolocationAttempted && !usedSavedLocation) {
-      console.log("⚠️ No geolocation attempt and no saved location, using Union Square");
+      // console.log("⚠️ No geolocation attempt and no saved location, using Union Square");
       setDefaultLocation();
     }
   
@@ -349,23 +350,23 @@ useEffect(() => {
 }, [selectedStop, setLocation]);
 
   useEffect(() => {
-    console.log('🛠️ Manual Scroll Check Trigger');
+    // console.log('🛠️ Manual Scroll Check Trigger');
     setTimeout(() => {
       checkScrollable();
     }, 1000); // Delay by 1s to ensure DOM is ready
   }, []);
 
   useEffect(() => {
-    console.log('🔑 GOOGLE_MAPS_API_KEY present:', !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
+    // console.log('🔑 GOOGLE_MAPS_API_KEY present:', !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
   }, []);
 
   useLayoutEffect(() => {
-    console.log('🛠️ useLayoutEffect Mounted: Adding Scroll Listeners');
+    // console.log('🛠️ useLayoutEffect Mounted: Adding Scroll Listeners');
   
     const el = scrollContainerRef.current; // Save the ref value at the beginning
   
     if (el) {
-      console.log('✅ Scroll Container Ready');
+      // console.log('✅ Scroll Container Ready');
       el.addEventListener('scroll', checkScrollable);
       window.addEventListener('resize', checkScrollable);
       checkScrollable(); // Ensure initial state is checked
@@ -416,7 +417,7 @@ useEffect(() => {
   };
 
   const handleOutsideNYC = async (lat: number, lon: number) => {
-    console.log("Outside NYC coords:", lat, lon);
+    // console.log("Outside NYC coords:", lat, lon);
     setIsOutsideNYC(true); // Set the outside NYC state
     
     // Get the location name
@@ -443,11 +444,11 @@ useEffect(() => {
 
   useEffect(() => {
     let isActive = true;
-    console.log('🔄 Location changed in page.tsx:', { lat: location.lat, lon: location.lon });
+    // console.log('🔄 Location changed in page.tsx:', { lat: location.lat, lon: location.lon });
 
     const fetchData = async () => {
         if (!location.lat || !location.lon) {
-            console.log('⚠️ No location data available, skipping fetch');
+            // console.log('⚠️ No location data available, skipping fetch');
             return;
         }
         
@@ -461,7 +462,7 @@ useEffect(() => {
             // Clear existing data before fetching new data
             setData(null);
             
-            console.log('📡 Fetching bus data for location:', { lat: location.lat, lon: location.lon });
+            // console.log('📡 Fetching bus data for location:', { lat: location.lat, lon: location.lon });
             await fetchBusData(location.lat, location.lon, isRefreshing);
         } catch (error) {
             console.error('Error fetching bus data:', error);
@@ -931,23 +932,30 @@ useEffect(() => {
   }, [isBannerVisible]);
 
   useEffect(() => {
+    let fadeTimer: NodeJS.Timeout;
+    let hideTimer: NodeJS.Timeout;
+  
     if (isIssueBannerVisible) {
-      // Start fade-out animation at 28 seconds
-      const fadeTimer = setTimeout(() => {
-        setIsIssueBannerFadingOut(true);
-      }, 18000);
+      // Clear any existing timers
+      setIsIssueBannerFadingOut(false);
   
-      // Fully hide the banner at 30 seconds
-      const hideTimer = setTimeout(() => {
-        setIsIssueBannerVisible(false);
-        setIsIssueBannerFadingOut(false); // Reset fade-out state
-      }, 20000);
+      // Only start auto-hide timers if banner was not manually triggered
+      if (isIssueBannerVisible) {
+        fadeTimer = setTimeout(() => {
+          setIsIssueBannerFadingOut(true);
+        }, 18000);
   
-      return () => {
-        clearTimeout(fadeTimer);
-        clearTimeout(hideTimer);
-      };
+        hideTimer = setTimeout(() => {
+          setIsIssueBannerVisible(false);
+          setIsIssueBannerFadingOut(false);
+        }, 20000);
+      }
     }
+  
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(hideTimer);
+    };
   }, [isIssueBannerVisible]);
 
   useEffect(() => {
@@ -989,7 +997,7 @@ useEffect(() => {
   }, [data]);
 
   const fetchBusData = async (lat: number, lon: number, isRefresh: boolean = false) => {
-    console.log('🚌 fetchBusData called with:', { lat, lon, isRefresh });
+    // console.log('🚌 fetchBusData called with:', { lat, lon, isRefresh });
     
     if (!isRefresh) {
         setLoadingState(prev => ({ ...prev, isLoading: true }));
@@ -1268,57 +1276,6 @@ useEffect(() => {
         <p>Loading bus data...</p>
       </div>
     }>
-      {isIssueBannerVisible && (
-  <div
-  style={{
-    textAlign: 'center',
-    backgroundColor: '#FFEEEE',
-    padding: '4px 8px',
-    marginTop: '4px',
-    overflow: 'hidden',
-    boxSizing: 'border-box',
-    color: 'red',
-    position: 'relative',
-    display: isIssueBannerVisible ? 'flex' : 'none',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transform: `translateY(${isIssueBannerFadingOut ? -20 : 0}px)`,
-    opacity: isIssueBannerFadingOut ? 0 : 1,
-    transition: 'opacity 1s ease-out, transform 1s ease-out',
-  }}
->
-
-    <p className="issue-text" style={{ margin: '4px 24px' }}>
-      There is a known issue where the MTA Bus Time API occasionally sends stops in the wrong direction, causing the stops list to be incorrect in the popup. Please use this data with caution and reference the 
-      <a 
-        href="https://bustime.mta.info/" 
-        target="_blank" 
-        rel="noopener noreferrer"
-        style={{ color: "red", textDecoration: "underline", marginLeft: "4px" }}
-      >
-        MTA website
-      </a> if needed.
-    </p>
-    <button
-      onClick={() => setIsIssueBannerVisible(false)}
-      style={{
-        position: 'absolute',
-        right: '8px',
-        background: 'none',
-        border: 'none',
-        color: 'red',
-        cursor: 'pointer',
-        fontSize: '18px',
-        padding: '4px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      ×
-    </button>
-  </div>
-)}
 <div style={{ 
   display: "flex", 
   flexDirection: "column",
@@ -1772,10 +1729,11 @@ useEffect(() => {
                                         style={{
                                           marginLeft: "4px",
                                           cursor: "pointer",
+                                          filter: 'drop-shadow(0px 0px 8px rgba(200, 0, 0, 1))'
                                         }}
                                         title="View Service Alerts"
                                       >
-                                        ⚠️
+                                        🚨
                                       </span>
                                     )}
                                   </div>
@@ -1864,11 +1822,11 @@ useEffect(() => {
                                                         
                                                         // Add these diagnostic logs
                                                                                                                   
-                                                          console.log('🚌 Direction Resolution:', {
-                                                            destination: selectedArrival?.MonitoredVehicleJourney?.DestinationName,
-                                                            rawDirection: direction,
-                                                            vehicleRef: visit.vehicleRef
-                                                          });
+                                                          // console.log('🚌 Direction Resolution:', {
+                                                          //   destination: selectedArrival?.MonitoredVehicleJourney?.DestinationName,
+                                                          //   rawDirection: direction,
+                                                          //   vehicleRef: visit.vehicleRef
+                                                          // });
                                                 
                                                         const stops = await fetchRouteStops(
                                                           routeName, 
@@ -1878,15 +1836,15 @@ useEffect(() => {
                                                       );
                                                 
                                                         // Log after API call
-                                                        console.log('🚏 Route Stops Response:', {
-                                                            routeName,
-                                                            stopName: stop.stopName,
-                                                            destination: selectedArrival?.MonitoredVehicleJourney?.DestinationName,
-                                                            direction: direction,
-                                                            stopsCount: stops.length,
-                                                            firstStop: stops[0],
-                                                            lastStop: stops[stops.length - 1]
-                                                        });
+                                                        // console.log('🚏 Route Stops Response:', {
+                                                        //     routeName,
+                                                        //     stopName: stop.stopName,
+                                                        //     destination: selectedArrival?.MonitoredVehicleJourney?.DestinationName,
+                                                        //     direction: direction,
+                                                        //     stopsCount: stops.length,
+                                                        //     firstStop: stops[0],
+                                                        //     lastStop: stops[stops.length - 1]
+                                                        // });
                                                 
                                                         let stopsAway = 0;
                                                 
@@ -1900,9 +1858,9 @@ useEffect(() => {
                                                             }
                                                         }
                                                 
-                                                        console.log(
-                                                            `🚍 Stops Away Calculated: ${stopsAway}, VehicleRef: ${visit.vehicleRef || 'Unknown VehicleRef'}`
-                                                        );
+                                                        // console.log(
+                                                        //     `🚍 Stops Away Calculated: ${stopsAway}, VehicleRef: ${visit.vehicleRef || 'Unknown VehicleRef'}`
+                                                        // );
                                                 
                                                         showBusInfo(
                                                             routeName,

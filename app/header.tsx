@@ -9,6 +9,7 @@ import Image from "next/image";
 
 const TABLET_BREAKPOINT = 768;
 
+
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [windowWidth, setWindowWidth] = useState(0);
@@ -18,14 +19,14 @@ export default function Header() {
 
   const handleLocationChange = async (newLocation: { lat: number | null; lon: number | null }) => {
     if (newLocation.lat && newLocation.lon) {
-      console.log("🚀 handleLocationChange triggered in Header");
+      // console.log("🚀 handleLocationChange triggered in Header");
       setIsLocationChanging(true);
-      console.log("⏳ isLocationChanging set to TRUE in Header");
+      // console.log("⏳ isLocationChanging set to TRUE in Header");
 
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       try {
-        console.log("📌 Setting new location:", newLocation);
+        // console.log("📌 Setting new location:", newLocation);
         setSelectedStop(`${newLocation.lat}, ${newLocation.lon}`);
       } catch (error) {
         console.error("❌ Error during location change:", error);
