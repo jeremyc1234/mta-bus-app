@@ -191,22 +191,35 @@ const [addressSuggestions, setAddressSuggestions] = useState<Array<{
     }
   };
 
-  const handleSelectChange = (selectedOption: LocationSelectOption | null) => {
-    setSelectedValue(selectedOption);
+  const handleSelectChange = async (selectedOption: LocationSelectOption | null) => {
     if (selectedOption) {
-      setInputValue(selectedOption.label); // Ensure inputValue updates with label
+      // Update all states in one batch
+      await Promise.all([
+        setSelectedValue(selectedOption),
+        setInputValue(selectedOption.label),
+        setLocation({
+          lat: selectedOption.value.lat,
+          lon: selectedOption.value.lon
+        })
+      ]);
+  
+      // Store in localStorage after state updates
       localStorage.setItem('dropdownInputValue', selectedOption.label);
       localStorage.setItem('selectedLocation', JSON.stringify(selectedOption));
       
-      setLocation({
-        lat: selectedOption.value.lat,
-        lon: selectedOption.value.lon
-      });
-      
+      // Trigger location change callback after all updates are complete
       onLocationChangeRef.current({
         lat: selectedOption.value.lat,
         lon: selectedOption.value.lon
       });
+      
+      // Signal that location is changing
+      setIsLocationChanging(true);
+      
+      // Reset location changing flag after a short delay
+      setTimeout(() => {
+        setIsLocationChanging(false);
+      }, 1000);
     }
   };
 

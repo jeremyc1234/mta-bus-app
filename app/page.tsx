@@ -218,6 +218,7 @@ const timerRef = useRef<HTMLSpanElement>(null);
   // Add this useEffect to page.tsx
   useEffect(() => {
     let geolocationAttempted = false;
+    let watchId: number | null = null;
   
     const fallbackLocation = () => {
       const savedLat = localStorage.getItem("savedLat");
@@ -228,6 +229,7 @@ const timerRef = useRef<HTMLSpanElement>(null);
         const lonNum = parseFloat(savedLon);
         if (!isNaN(latNum) && !isNaN(lonNum)) {
           setLocation({ lat: latNum, lon: lonNum });
+          setLocationServicesEnabled(true);
         }
       } else {
         setLocation({ lat: UNION_SQUARE_LAT, lon: UNION_SQUARE_LON });
@@ -245,20 +247,42 @@ const timerRef = useRef<HTMLSpanElement>(null);
       }
     };
   
+    const handlePositionUpdate = (pos: GeolocationPosition) => {
+      const { latitude, longitude } = pos.coords;
+      if (isWithinNYC(latitude, longitude)) {
+        setLocation({ lat: latitude, lon: longitude });
+        setLocationServicesEnabled(true);
+        localStorage.setItem("savedLat", String(latitude));
+        localStorage.setItem("savedLon", String(longitude));
+      } else {
+        handleOutsideNYC(latitude, longitude);
+      }
+    };
+  
     if ("geolocation" in navigator) {
       geolocationAttempted = true;
+      
+      // Get initial position
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          if (isWithinNYC(latitude, longitude)) {
-            setLocation({ lat: latitude, lon: longitude });
-            localStorage.setItem("savedLat", String(latitude));
-            localStorage.setItem("savedLon", String(longitude));
-          }
-        },
+        handlePositionUpdate,
         (error) => {
           console.log('Geolocation error:', error);
-          fallbackLocation(); // ✅ Safe call to a standard function
+          setLocationServicesEnabled(false);
+          fallbackLocation();
+        },
+        {
+          maximumAge: 30000,
+          timeout: 27000,
+          enableHighAccuracy: false,
+        }
+      );
+      
+      // Watch for position updates
+      watchId = navigator.geolocation.watchPosition(
+        handlePositionUpdate,
+        (error) => {
+          console.log('Geolocation watch error:', error);
+          setLocationServicesEnabled(false);
         },
         {
           maximumAge: 30000,
@@ -269,9 +293,16 @@ const timerRef = useRef<HTMLSpanElement>(null);
     }
   
     if (!geolocationAttempted) {
-      fallbackLocation(); // ✅ Safe call to a standard function
+      fallbackLocation();
     }
-  }, [setLocation, UNION_SQUARE_LAT, UNION_SQUARE_LON]);
+  
+    // Cleanup function
+    return () => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
+  }, []);
 
 useEffect(() => {
   if (selectedStop) {
@@ -379,27 +410,44 @@ useEffect(() => {
   };
 
   useEffect(() => {
-    if (location.lat && location.lon) {
+    let isActive = true; // For cleanup
+  
+    const fetchData = async () => {
+      if (!location.lat || !location.lon) return;
+      
+      // Set loading state
       setLoadingState(prev => ({
         ...prev,
         isLoading: !isRefreshing
       }));
       
-      const fetchData = async () => {
-        try {
-          await fetchBusData(location.lat!, location.lon!, isRefreshing);
-        } finally {
+      try {
+        // Clear existing data before fetching new data
+        setData(null);
+        
+        // Fetch new data
+        await fetchBusData(location.lat, location.lon, isRefreshing);
+      } catch (error) {
+        console.error('Error fetching bus data:', error);
+        setError('Failed to fetch bus data');
+      } finally {
+        if (isActive) {
           setLoadingState(prev => ({
             ...prev,
             isLoading: false,
             isRefreshing: false
           }));
         }
-      };
-      
-      fetchData();
-    }
-  }, [location, isRefreshing]);
+      }
+    };
+    
+    fetchData();
+  
+    // Cleanup function
+    return () => {
+      isActive = false;
+    };
+  }, [location.lat, location.lon, isRefreshing]);
 
   useEffect(() => {
     setIsMobile(window.matchMedia("(pointer: coarse)").matches);
@@ -1096,14 +1144,6 @@ useEffect(() => {
         route = mvj.LineRef.replace("MTA NYCT_", "")
           .replace("MTABC_", "");
       }
-
-      // Add these debug logs
-      console.log('🚌 Raw MTA Direction Data:', {
-        direction: mvj.DirectionRef,
-        destination: mvj.DestinationName,
-        vehicleRef: mvj.VehicleRef,
-        fullMvj: mvj
-      });
 
       // Get the direction (0 or 1) from the DirectionRef
       const direction = mvj.DirectionRef;
