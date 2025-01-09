@@ -1665,7 +1665,7 @@ useEffect(() => {
                               fontSize: '1rem',
                               color: '#333',
                             }}>
-                              Directions to stop:
+                              Directions to this stop:
                             </span>
                             <NavigationButtons
                               stopName={stop.stopName}
