@@ -140,16 +140,16 @@ const timerRef = useRef<HTMLSpanElement>(null);
   };
 
   const getAddressFromCoords = async (lat: number, lon: number) => {
-    // console.log('🌍 Starting geocoding for coordinates:', { lat, lon });
+    console.log('🌍 Starting geocoding for coordinates:', { lat, lon });
     try {
       const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
       // console.log('🔑 API Key present:', !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
 
       const response = await fetch(url);
-      // console.log('📡 Geocoding API response status:', response.status);
+      console.log('📡 Geocoding API response status:', response.status);
 
       const data = await response.json();
-      // console.log('📍 Geocoding API response:', data);
+      console.log('📍 Geocoding API response:', data);
 
       if (data.status === 'REQUEST_DENIED') {
         console.error('❌ API Request Denied:', data.error_message);
@@ -176,11 +176,11 @@ const timerRef = useRef<HTMLSpanElement>(null);
         }
 
         const formattedLocation = `${city}, ${state}`;
-        // console.log('✅ Found location:', formattedLocation);
+        console.log('✅ Found location:', formattedLocation);
         return formattedLocation;
       }
 
-      // console.log('❌ No results found in geocoding response');
+      console.log('❌ No results found in geocoding response');
       return null;
     } catch (error) {
       console.error('❌ Geocoding error:', error);
@@ -204,14 +204,14 @@ const timerRef = useRef<HTMLSpanElement>(null);
       const latNum = parseFloat(savedLat);
       const lonNum = parseFloat(savedLon);
       if (!isNaN(latNum) && !isNaN(lonNum)) {
-        // console.log("✅ Using saved location:", { lat: latNum, lon: lonNum });
+        console.log("✅ Using saved location:", { lat: latNum, lon: lonNum });
         setLocation({ lat: latNum, lon: lonNum });
         setLocationServicesEnabled(false);
         return true;
       }
-      // console.log("❌ Saved coordinates are invalid:", { savedLat, savedLon });
+      console.log("❌ Saved coordinates are invalid:", { savedLat, savedLon });
     } else {
-      // console.log("❌ No saved location found in localStorage");
+      console.log("❌ No saved location found in localStorage");
     }
     
     console.log("⚠️ Falling back to Union Square in fallbackLocation");
@@ -244,52 +244,52 @@ const timerRef = useRef<HTMLSpanElement>(null);
     let geolocationAttempted = false;
     let watchId: number | null = null;
   
-    // console.log("🚀 Starting location initialization...");
+    console.log("🚀 Starting location initialization...");
     const usedSavedLocation = fallbackLocation();
-    // console.log("📍 Used saved location?", usedSavedLocation);
+    console.log("📍 Used saved location?", usedSavedLocation);
   
     const handlePositionUpdate = (pos: GeolocationPosition) => {
       const { latitude, longitude } = pos.coords;
-      // console.log("📱 Got geolocation update:", { latitude, longitude });
+      console.log("📱 Got geolocation update:", { latitude, longitude });
       setLocationServicesEnabled(true);
       
       if (isWithinNYC(latitude, longitude)) {
-        // console.log("✅ Location is within NYC, using current position");
+        console.log("✅ Location is within NYC, using current position");
         setLocation({ lat: latitude, lon: longitude });
         setIsOutsideNYC(false);
         localStorage.setItem("savedLat", String(latitude));
         localStorage.setItem("savedLon", String(longitude));
       } else {
-        // console.log("🌎 Location is outside NYC, checking saved location...");
+        console.log("🌎 Location is outside NYC, checking saved location...");
         const savedLat = localStorage.getItem("savedLat");
         const savedLon = localStorage.getItem("savedLon");
         if (savedLat && savedLon) {
           const latNum = parseFloat(savedLat);
           const lonNum = parseFloat(savedLon);
           if (!isNaN(latNum) && !isNaN(lonNum) && isWithinNYC(latNum, lonNum)) {
-            // console.log("✅ Found valid saved NYC location, using it instead:", { latNum, lonNum });
+            console.log("✅ Found valid saved NYC location, using it instead:", { latNum, lonNum });
             setLocation({ lat: latNum, lon: lonNum });
             setIsOutsideNYC(true);
             return;
           }
-          // console.log("❌ Saved location invalid or outside NYC:", { latNum, lonNum });
+          console.log("❌ Saved location invalid or outside NYC:", { latNum, lonNum });
         }
-        // console.log("⚠️ Handling outside NYC case");
+        console.log("⚠️ Handling outside NYC case");
         handleOutsideNYC(latitude, longitude);
       }
     };
   
     if ("geolocation" in navigator) {
-      // console.log("📱 Geolocation is available");
+      console.log("📱 Geolocation is available");
       geolocationAttempted = true;
       
       navigator.geolocation.getCurrentPosition(
         handlePositionUpdate,
         (error) => {
-          // console.log('❌ Geolocation error:', error);
+          console.log('❌ Geolocation error:', error);
           setLocationServicesEnabled(false);
           if (!usedSavedLocation) {
-            // console.log("⚠️ No saved location and geolocation failed, falling back to Union Square");
+            console.log("⚠️ No saved location and geolocation failed, falling back to Union Square");
             setDefaultLocation();
           }
         },
@@ -303,7 +303,7 @@ const timerRef = useRef<HTMLSpanElement>(null);
       watchId = navigator.geolocation.watchPosition(
         handlePositionUpdate,
         (error) => {
-          // console.log('❌ Geolocation watch error:', error);
+          console.log('❌ Geolocation watch error:', error);
           setLocationServicesEnabled(false);
         },
         {
@@ -313,11 +313,11 @@ const timerRef = useRef<HTMLSpanElement>(null);
         }
       );
     } else {
-      // console.log("📱 Geolocation is not available");
+      console.log("📱 Geolocation is not available");
     }
   
     if (!geolocationAttempted && !usedSavedLocation) {
-      // console.log("⚠️ No geolocation attempt and no saved location, using Union Square");
+      console.log("⚠️ No geolocation attempt and no saved location, using Union Square");
       setDefaultLocation();
     }
   
@@ -417,7 +417,7 @@ useEffect(() => {
   };
 
   const handleOutsideNYC = async (lat: number, lon: number) => {
-    // console.log("Outside NYC coords:", lat, lon);
+    console.log("Outside NYC coords:", lat, lon);
     setIsOutsideNYC(true); // Set the outside NYC state
     
     // Get the location name
@@ -444,11 +444,11 @@ useEffect(() => {
 
   useEffect(() => {
     let isActive = true;
-    // console.log('🔄 Location changed in page.tsx:', { lat: location.lat, lon: location.lon });
+    console.log('🔄 Location changed in page.tsx:', { lat: location.lat, lon: location.lon });
 
     const fetchData = async () => {
         if (!location.lat || !location.lon) {
-            // console.log('⚠️ No location data available, skipping fetch');
+            console.log('⚠️ No location data available, skipping fetch');
             return;
         }
         
@@ -462,7 +462,7 @@ useEffect(() => {
             // Clear existing data before fetching new data
             setData(null);
             
-            // console.log('📡 Fetching bus data for location:', { lat: location.lat, lon: location.lon });
+            console.log('📡 Fetching bus data for location:', { lat: location.lat, lon: location.lon });
             await fetchBusData(location.lat, location.lon, isRefreshing);
         } catch (error) {
             console.error('Error fetching bus data:', error);
