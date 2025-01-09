@@ -200,24 +200,24 @@ const [addressSuggestions, setAddressSuggestions] = useState<Array<{
   };
 
   const ClearIndicator = (props: any) => {
-    const { innerRef, innerProps } = props;
-    return (
-      <div
-        {...innerProps}
-        ref={innerRef}
-        style={{
-          cursor: "pointer",
-          padding: "0 8px",
-          fontSize: "1.2rem",
-          color: "#888",
-        }}
-        title="Clear"
-        onClick={() => handleInputChange("", { action: "clear" })}
-      >
-        ×
-      </div>
-    );
-  };
+  const { innerRef, innerProps } = props;
+  return (
+    <div
+      {...innerProps}
+      ref={innerRef}
+      style={{
+        cursor: "pointer",
+        padding: "0 8px",
+        fontSize: "1.2rem",
+        color: "#888",
+      }}
+      title="Clear"
+      onClick={() => handleInputChange("", { action: "clear" })}
+    >
+      ×
+    </div>
+  );
+};
   
 
   const handleSelectChange = async (selectedOption: LocationSelectOption | null) => {

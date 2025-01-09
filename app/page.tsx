@@ -442,44 +442,47 @@ useEffect(() => {
   };
 
   useEffect(() => {
-    let isActive = true; // For cleanup
-  
+    let isActive = true;
+    console.log('🔄 Location changed in page.tsx:', { lat: location.lat, lon: location.lon });
+
     const fetchData = async () => {
-      if (!location.lat || !location.lon) return;
-      
-      // Set loading state
-      setLoadingState(prev => ({
-        ...prev,
-        isLoading: !isRefreshing
-      }));
-      
-      try {
-        // Clear existing data before fetching new data
-        setData(null);
-        
-        // Fetch new data
-        await fetchBusData(location.lat, location.lon, isRefreshing);
-      } catch (error) {
-        console.error('Error fetching bus data:', error);
-        setError('Failed to fetch bus data');
-      } finally {
-        if (isActive) {
-          setLoadingState(prev => ({
-            ...prev,
-            isLoading: false,
-            isRefreshing: false
-          }));
+        if (!location.lat || !location.lon) {
+            console.log('⚠️ No location data available, skipping fetch');
+            return;
         }
-      }
+        
+        // Set loading state
+        setLoadingState(prev => ({
+            ...prev,
+            isLoading: !isRefreshing
+        }));
+        
+        try {
+            // Clear existing data before fetching new data
+            setData(null);
+            
+            console.log('📡 Fetching bus data for location:', { lat: location.lat, lon: location.lon });
+            await fetchBusData(location.lat, location.lon, isRefreshing);
+        } catch (error) {
+            console.error('Error fetching bus data:', error);
+            setError('Failed to fetch bus data');
+        } finally {
+            if (isActive) {
+                setLoadingState(prev => ({
+                    ...prev,
+                    isLoading: false,
+                    isRefreshing: false
+                }));
+            }
+        }
     };
     
     fetchData();
-  
-    // Cleanup function
+
     return () => {
-      isActive = false;
+        isActive = false;
     };
-  }, [location.lat, location.lon, isRefreshing]);
+}, [location.lat, location.lon, isRefreshing]);
 
   useEffect(() => {
     setIsMobile(window.matchMedia("(pointer: coarse)").matches);
@@ -986,42 +989,44 @@ useEffect(() => {
   }, [data]);
 
   const fetchBusData = async (lat: number, lon: number, isRefresh: boolean = false) => {
+    console.log('🚌 fetchBusData called with:', { lat, lon, isRefresh });
+    
     if (!isRefresh) {
-      setLoadingState(prev => ({ ...prev, isLoading: true }));
+        setLoadingState(prev => ({ ...prev, isLoading: true }));
     } else {
-      setLoadingState(prev => ({ ...prev, isRefreshing: true }));
+        setLoadingState(prev => ({ ...prev, isRefreshing: true }));
     }
-  
+
     try {
-      const fetchPromise = fetch(`/api/busdata?lat=${lat}&lon=${lon}`);
-      const [res] = await Promise.all([
-        fetchPromise,
-        !isRefresh ? new Promise(resolve => setTimeout(resolve, 1000)) : Promise.resolve()
-      ]);
-      const now = new Date();
-      const formattedTime = now.toLocaleTimeString([], { 
-        hour: "2-digit", 
-        minute: "2-digit", 
-        hour12: true 
-      });
-      setLastUpdatedTime(formattedTime);
-      if (!res.ok) {
-        throw new Error(`Server responded with ${res.status}`);
-      }
-      const json = await res.json();
-      setData(json);
-      setError(null);
+        const fetchPromise = fetch(`/api/busdata?lat=${lat}&lon=${lon}`);
+        const [res] = await Promise.all([
+            fetchPromise,
+            !isRefresh ? new Promise(resolve => setTimeout(resolve, 1000)) : Promise.resolve()
+        ]);
+        const now = new Date();
+        const formattedTime = now.toLocaleTimeString([], { 
+            hour: "2-digit", 
+            minute: "2-digit", 
+            hour12: true 
+        });
+        setLastUpdatedTime(formattedTime);
+        if (!res.ok) {
+            throw new Error(`Server responded with ${res.status}`);
+        }
+        const json = await res.json();
+        setData(json);
+        setError(null);
     } catch (err) {
-      console.error('❌ Fetch error:', err);
-      setError('Failed to load bus data.');
+        console.error('❌ Fetch error:', err);
+        setError('Failed to load bus data.');
     } finally {
-      setLoadingState(prev => ({
-        ...prev,
-        isLoading: false,
-        isRefreshing: false
-      }));
+        setLoadingState(prev => ({
+            ...prev,
+            isLoading: false,
+            isRefreshing: false
+        }));
     }
-  };
+};
 
   useEffect(() => {
     if (typeof window !== "undefined") {
