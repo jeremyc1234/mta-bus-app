@@ -97,7 +97,7 @@ const HomeContent = () => {
   const refreshInterval = 30000;
   const [timeRemaining, setTimeRemaining] = useState<number>(refreshInterval / 1000);
   const lastUpdateRef = useRef<number>(Date.now());
-const timerRef = useRef<HTMLSpanElement>(null);
+  const timerRef = useRef<HTMLSpanElement>(null);
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
   const [isFadingOut, setIsFadingOut] = useState(false);
   const [isStopLoading, setIsStopLoading] = useState<boolean>(false);
@@ -132,7 +132,7 @@ const timerRef = useRef<HTMLSpanElement>(null);
     setIsMapPopupOpen(true);
     document.body.classList.add('no-scroll');
   };
-  
+
   const closeRouteMapPopup = () => {
     setSelectedRouteId(null);
     setIsMapPopupOpen(false);
@@ -143,7 +143,7 @@ const timerRef = useRef<HTMLSpanElement>(null);
     console.log('🌍 Starting geocoding for coordinates:', { lat, lon });
     try {
       const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
-      // console.log('🔑 API Key present:', !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
+      console.log('🔑 API Key present:', !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
 
       const response = await fetch(url);
       console.log('📡 Geocoding API response status:', response.status);
@@ -199,7 +199,7 @@ const timerRef = useRef<HTMLSpanElement>(null);
     // console.log("🔍 Checking for saved location in fallbackLocation...");
     const savedLat = localStorage.getItem("savedLat");
     const savedLon = localStorage.getItem("savedLon");
-  
+
     if (savedLat && savedLon) {
       const latNum = parseFloat(savedLat);
       const lonNum = parseFloat(savedLon);
@@ -213,7 +213,7 @@ const timerRef = useRef<HTMLSpanElement>(null);
     } else {
       console.log("❌ No saved location found in localStorage");
     }
-    
+
     console.log("⚠️ Falling back to Union Square in fallbackLocation");
     setDefaultLocation();
     return false;
@@ -243,16 +243,16 @@ const timerRef = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     let geolocationAttempted = false;
     let watchId: number | null = null;
-  
+
     console.log("🚀 Starting location initialization...");
     const usedSavedLocation = fallbackLocation();
     console.log("📍 Used saved location?", usedSavedLocation);
-  
+
     const handlePositionUpdate = (pos: GeolocationPosition) => {
       const { latitude, longitude } = pos.coords;
       console.log("📱 Got geolocation update:", { latitude, longitude });
       setLocationServicesEnabled(true);
-      
+
       if (isWithinNYC(latitude, longitude)) {
         console.log("✅ Location is within NYC, using current position");
         setLocation({ lat: latitude, lon: longitude });
@@ -278,11 +278,11 @@ const timerRef = useRef<HTMLSpanElement>(null);
         handleOutsideNYC(latitude, longitude);
       }
     };
-  
+
     if ("geolocation" in navigator) {
       console.log("📱 Geolocation is available");
       geolocationAttempted = true;
-      
+
       navigator.geolocation.getCurrentPosition(
         handlePositionUpdate,
         (error) => {
@@ -299,7 +299,7 @@ const timerRef = useRef<HTMLSpanElement>(null);
           enableHighAccuracy: false,
         }
       );
-      
+
       watchId = navigator.geolocation.watchPosition(
         handlePositionUpdate,
         (error) => {
@@ -315,12 +315,12 @@ const timerRef = useRef<HTMLSpanElement>(null);
     } else {
       console.log("📱 Geolocation is not available");
     }
-  
+
     if (!geolocationAttempted && !usedSavedLocation) {
       console.log("⚠️ No geolocation attempt and no saved location, using Union Square");
       setDefaultLocation();
     }
-  
+
     return () => {
       if (watchId !== null) {
         navigator.geolocation.clearWatch(watchId);
@@ -328,26 +328,26 @@ const timerRef = useRef<HTMLSpanElement>(null);
     };
   }, []);
 
-useEffect(() => {
-  if (selectedStop) {
-    // If it's coordinates (from geolocation)
-    if (selectedStop.includes(',')) {
-      const [lat, lon] = selectedStop.split(',').map(Number);
-      if (!isNaN(lat) && !isNaN(lon)) {
-        setLocation({ lat, lon });
-      }
-    } else {
-      // If it's a named location
-      const foundLocation = BUS_STOP_LOCATIONS.find(loc => loc.label === selectedStop);
-      if (foundLocation && foundLocation.lat && foundLocation.lon) {
-        setLocation({
-          lat: foundLocation.lat,
-          lon: foundLocation.lon
-        });
+  useEffect(() => {
+    if (selectedStop) {
+      // If it's coordinates (from geolocation)
+      if (selectedStop.includes(',')) {
+        const [lat, lon] = selectedStop.split(',').map(Number);
+        if (!isNaN(lat) && !isNaN(lon)) {
+          setLocation({ lat, lon });
+        }
+      } else {
+        // If it's a named location
+        const foundLocation = BUS_STOP_LOCATIONS.find(loc => loc.label === selectedStop);
+        if (foundLocation && foundLocation.lat && foundLocation.lon) {
+          setLocation({
+            lat: foundLocation.lat,
+            lon: foundLocation.lon
+          });
+        }
       }
     }
-  }
-}, [selectedStop, setLocation]);
+  }, [selectedStop, setLocation]);
 
   useEffect(() => {
     // console.log('🛠️ Manual Scroll Check Trigger');
@@ -362,9 +362,9 @@ useEffect(() => {
 
   useLayoutEffect(() => {
     // console.log('🛠️ useLayoutEffect Mounted: Adding Scroll Listeners');
-  
+
     const el = scrollContainerRef.current; // Save the ref value at the beginning
-  
+
     if (el) {
       // console.log('✅ Scroll Container Ready');
       el.addEventListener('scroll', checkScrollable);
@@ -373,7 +373,7 @@ useEffect(() => {
     } else {
       console.warn('⚠️ scrollContainerRef is still null in useLayoutEffect');
     }
-  
+
     return () => {
       if (el) { // Use the saved ref value
         el.removeEventListener('scroll', checkScrollable);
@@ -381,7 +381,7 @@ useEffect(() => {
       window.removeEventListener('resize', checkScrollable);
     };
   }, []);
-  
+
   const checkServiceAlert = async (routeId: string) => {
     try {
       const cleanRouteId = routeId.replace(/MTA NYCT_|MTABC_/g, '').toUpperCase();
@@ -419,23 +419,23 @@ useEffect(() => {
   const handleOutsideNYC = async (lat: number, lon: number) => {
     console.log("Outside NYC coords:", lat, lon);
     setIsOutsideNYC(true); // Set the outside NYC state
-    
+
     // Get the location name
     const locationName = await getAddressFromCoords(lat, lon);
     if (locationName) {
       setUserLocation(locationName);
     }
-    
+
     // Only revert if we have no saved location
     const savedLat = localStorage.getItem("savedLat");
     const savedLon = localStorage.getItem("savedLon");
     const hasSavedLocation = savedLat && savedLon;
-  
+
     if (!hasSavedLocation) {
       setDefaultLocation(); // fallback to Union Square
     }
   };
-  
+
 
   const handleLocationError = () => {
     setLocationServicesEnabled(false);
@@ -447,43 +447,43 @@ useEffect(() => {
     console.log('🔄 Location changed in page.tsx:', { lat: location.lat, lon: location.lon });
 
     const fetchData = async () => {
-        if (!location.lat || !location.lon) {
-            console.log('⚠️ No location data available, skipping fetch');
-            return;
-        }
-        
-        // Set loading state
-        setLoadingState(prev => ({
+      if (!location.lat || !location.lon) {
+        console.log('⚠️ No location data available, skipping fetch');
+        return;
+      }
+
+      // Set loading state
+      setLoadingState(prev => ({
+        ...prev,
+        isLoading: !isRefreshing
+      }));
+
+      try {
+        // Clear existing data before fetching new data
+        setData(null);
+
+        console.log('📡 Fetching bus data for location:', { lat: location.lat, lon: location.lon });
+        await fetchBusData(location.lat, location.lon, isRefreshing);
+      } catch (error) {
+        console.error('Error fetching bus data:', error);
+        setError('Failed to fetch bus data');
+      } finally {
+        if (isActive) {
+          setLoadingState(prev => ({
             ...prev,
-            isLoading: !isRefreshing
-        }));
-        
-        try {
-            // Clear existing data before fetching new data
-            setData(null);
-            
-            console.log('📡 Fetching bus data for location:', { lat: location.lat, lon: location.lon });
-            await fetchBusData(location.lat, location.lon, isRefreshing);
-        } catch (error) {
-            console.error('Error fetching bus data:', error);
-            setError('Failed to fetch bus data');
-        } finally {
-            if (isActive) {
-                setLoadingState(prev => ({
-                    ...prev,
-                    isLoading: false,
-                    isRefreshing: false
-                }));
-            }
+            isLoading: false,
+            isRefreshing: false
+          }));
         }
+      }
     };
-    
+
     fetchData();
 
     return () => {
-        isActive = false;
+      isActive = false;
     };
-}, [location.lat, location.lon, isRefreshing]);
+  }, [location.lat, location.lon, isRefreshing]);
 
   useEffect(() => {
     setIsMobile(window.matchMedia("(pointer: coarse)").matches);
@@ -934,24 +934,24 @@ useEffect(() => {
   useEffect(() => {
     let fadeTimer: NodeJS.Timeout;
     let hideTimer: NodeJS.Timeout;
-  
+
     if (isIssueBannerVisible) {
       // Clear any existing timers
       setIsIssueBannerFadingOut(false);
-  
+
       // Only start auto-hide timers if banner was not manually triggered
       if (isIssueBannerVisible) {
         fadeTimer = setTimeout(() => {
           setIsIssueBannerFadingOut(true);
         }, 18000);
-  
+
         hideTimer = setTimeout(() => {
           setIsIssueBannerVisible(false);
           setIsIssueBannerFadingOut(false);
         }, 20000);
       }
     }
-  
+
     return () => {
       clearTimeout(fadeTimer);
       clearTimeout(hideTimer);
@@ -998,43 +998,43 @@ useEffect(() => {
 
   const fetchBusData = async (lat: number, lon: number, isRefresh: boolean = false) => {
     // console.log('🚌 fetchBusData called with:', { lat, lon, isRefresh });
-    
+
     if (!isRefresh) {
-        setLoadingState(prev => ({ ...prev, isLoading: true }));
+      setLoadingState(prev => ({ ...prev, isLoading: true }));
     } else {
-        setLoadingState(prev => ({ ...prev, isRefreshing: true }));
+      setLoadingState(prev => ({ ...prev, isRefreshing: true }));
     }
 
     try {
-        const fetchPromise = fetch(`/api/busdata?lat=${lat}&lon=${lon}`);
-        const [res] = await Promise.all([
-            fetchPromise,
-            !isRefresh ? new Promise(resolve => setTimeout(resolve, 1000)) : Promise.resolve()
-        ]);
-        const now = new Date();
-        const formattedTime = now.toLocaleTimeString([], { 
-            hour: "2-digit", 
-            minute: "2-digit", 
-            hour12: true 
-        });
-        setLastUpdatedTime(formattedTime);
-        if (!res.ok) {
-            throw new Error(`Server responded with ${res.status}`);
-        }
-        const json = await res.json();
-        setData(json);
-        setError(null);
+      const fetchPromise = fetch(`/api/busdata?lat=${lat}&lon=${lon}`);
+      const [res] = await Promise.all([
+        fetchPromise,
+        !isRefresh ? new Promise(resolve => setTimeout(resolve, 1000)) : Promise.resolve()
+      ]);
+      const now = new Date();
+      const formattedTime = now.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      });
+      setLastUpdatedTime(formattedTime);
+      if (!res.ok) {
+        throw new Error(`Server responded with ${res.status}`);
+      }
+      const json = await res.json();
+      setData(json);
+      setError(null);
     } catch (err) {
-        console.error('❌ Fetch error:', err);
-        setError('Failed to load bus data.');
+      console.error('❌ Fetch error:', err);
+      setError('Failed to load bus data.');
     } finally {
-        setLoadingState(prev => ({
-            ...prev,
-            isLoading: false,
-            isRefreshing: false
-        }));
+      setLoadingState(prev => ({
+        ...prev,
+        isLoading: false,
+        isRefreshing: false
+      }));
     }
-};
+  };
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -1123,7 +1123,7 @@ useEffect(() => {
     }, 1000);
     return () => clearInterval(ticker);
   }, [location.lat, location.lon]);
-  
+
   if (error) {
     return (
       <div style={{ padding: 20, textAlign: "center", fontFamily: "Helvetica, sans-serif" }}>
@@ -1185,7 +1185,7 @@ useEffect(() => {
       console.error('Error fetching route stops:', error.message || error);
       return [];
     }
-};
+  };
 
 
   function getStopArrivals(stopId: string) {
@@ -1224,7 +1224,7 @@ useEffect(() => {
     });
 
     return routeDirectionMap;
-}
+  }
 
   function getMinutesAway(dateString: string) {
     const arrivalDate = new Date(dateString);
@@ -1276,565 +1276,565 @@ useEffect(() => {
         <p>Loading bus data...</p>
       </div>
     }>
-<div style={{ 
-  display: "flex", 
-  flexDirection: "column",
-  height: "100%",
-  margin: "0 20px"
-}}>
-      {/* Location Services Banner */}
-      {isBannerVisible && windowWidth !== null && (
-  <div style={{
-    backgroundColor: "rgba(255, 204, 187, 0.9)",
-    color: "#FF3632",
-    padding: "8px 12px",
-    borderRadius: "8px",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    position: "fixed",
-    top: "10px",
-    left: "50%",
-    transform: `translate(-50%, ${isFadingOut ? -20 : 0}px)`,
-    zIndex: 2000,
-    textAlign: "center",
-    width: windowWidth < 768 ? "90%" : "max-content", // Change from "auto" to "max-content"
-    maxWidth: "90%", // Add this to ensure it never overflows the screen
-    whiteSpace: "normal", // Remove the conditional, always allow wrapping
-    lineHeight: "1.4",
-    boxSizing: "border-box",
-    transition: "opacity 1s ease-out, transform 1s ease-out",
-    opacity: isFadingOut ? 0 : 1,
-    fontSize: "0.95rem",
-    boxShadow: "0 2px 10px rgba(0, 0, 0, 0.1)",
-    justifyContent: "center",
-  }}>
-    <span style={{
-      fontWeight: "bold",
-      textAlign: "center",
-      flex: "0 1 auto",
-      whiteSpace: "normal", // Remove the conditional, always allow wrapping
-      wordWrap: "break-word", // Remove the conditional, always allow word breaking
-      overflowWrap: "break-word", // Add this to help with wrapping
-      hyphens: "auto",
-    }}>
-      {!locationServicesEnabled ? (
-        "📍 Please turn on location services to get information for the closest stops to you!"
-      ) : isOutsideNYC ? (
-        userLocation ? 
-          `📍 You're currently in ${userLocation}. Since you're outside NYC, please select from the dropdown or type in an NYC address.` :
-          "📍 You're currently outside NYC. Please select from the dropdown or type in an NYC address."
-      ) : (
-        "📍 Please turn on location services to get information for the closest stops to you!"
-      )}
-    </span>
-    <button
-      onClick={() => setIsBannerVisible(false)}
-      style={{
-        background: "none",
-        border: "none",
-        fontSize: "1.2rem",
-        cursor: "pointer",
-        marginLeft: "8px",
-        color: "#FF3632",
-        flexShrink: 0,
-        padding: "0 8px"
-      }}
-    >
-      ×
-    </button>
-  </div>
-)}
-      <BusPopupProvider>
-        {isAlertPopupOpen && serviceAlert && (
-          <ServiceAlertPopup
-            alert={serviceAlert}
-            onClose={() => {
-              setIsAlertPopupOpen(false);
-              setServiceAlert(null);
-            }}
-          />
-        )}
-        <BusContent>
-          {(showBusInfo) => (
-            <div style={{
-              display: "flex",
-              flexDirection: "column",
-              height: "100%",
-              width: "100%",
-              position: "relative",
-              flex: 1,
-              overflow: "hidden"
+      <div style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        margin: "0 20px"
+      }}>
+        {/* Location Services Banner */}
+        {isBannerVisible && windowWidth !== null && (
+          <div style={{
+            backgroundColor: "rgba(255, 204, 187, 0.9)",
+            color: "#FF3632",
+            padding: "8px 12px",
+            borderRadius: "8px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            position: "fixed",
+            top: "10px",
+            left: "50%",
+            transform: `translate(-50%, ${isFadingOut ? -20 : 0}px)`,
+            zIndex: 2000,
+            textAlign: "center",
+            width: windowWidth < 768 ? "90%" : "max-content", // Change from "auto" to "max-content"
+            maxWidth: "90%", // Add this to ensure it never overflows the screen
+            whiteSpace: "normal", // Remove the conditional, always allow wrapping
+            lineHeight: "1.4",
+            boxSizing: "border-box",
+            transition: "opacity 1s ease-out, transform 1s ease-out",
+            opacity: isFadingOut ? 0 : 1,
+            fontSize: "0.95rem",
+            boxShadow: "0 2px 10px rgba(0, 0, 0, 0.1)",
+            justifyContent: "center",
+          }}>
+            <span style={{
+              fontWeight: "bold",
+              textAlign: "center",
+              flex: "0 1 auto",
+              whiteSpace: "normal", // Remove the conditional, always allow wrapping
+              wordWrap: "break-word", // Remove the conditional, always allow word breaking
+              overflowWrap: "break-word", // Add this to help with wrapping
+              hyphens: "auto",
             }}>
+              {!locationServicesEnabled ? (
+                "📍 Please turn on location services to get information for the closest stops to you!"
+              ) : isOutsideNYC ? (
+                userLocation ?
+                  `📍 You're currently in ${userLocation}. Since you're outside NYC, please select from the dropdown or type in an NYC address.` :
+                  "📍 You're currently outside NYC. Please select from the dropdown or type in an NYC address."
+              ) : (
+                "📍 Please turn on location services to get information for the closest stops to you!"
+              )}
+            </span>
+            <button
+              onClick={() => setIsBannerVisible(false)}
+              style={{
+                background: "none",
+                border: "none",
+                fontSize: "1.2rem",
+                cursor: "pointer",
+                marginLeft: "8px",
+                color: "#FF3632",
+                flexShrink: 0,
+                padding: "0 8px"
+              }}
+            >
+              ×
+            </button>
+          </div>
+        )}
+        <BusPopupProvider>
+          {isAlertPopupOpen && serviceAlert && (
+            <ServiceAlertPopup
+              alert={serviceAlert}
+              onClose={() => {
+                setIsAlertPopupOpen(false);
+                setServiceAlert(null);
+              }}
+            />
+          )}
+          <BusContent>
+            {(showBusInfo) => (
               <div style={{
-                padding: "20px 0",
-                textAlign: "center",
-                width: "100%",
-                maxWidth: "100vw",
-                flex: 1, // Added to ensure it takes up remaining space
                 display: "flex",
                 flexDirection: "column",
-                justifyContent: "flex-start",
-                gap: "8px",
+                height: "100%",
+                width: "100%",
+                position: "relative",
+                flex: 1,
+                overflow: "hidden"
               }}>
                 <div style={{
-                  overflow: "hidden",
+                  padding: "20px 0",
+                  textAlign: "center",
+                  width: "100%",
                   maxWidth: "100vw",
-                  scrollSnapType: isMobile ? "x mandatory" : "none",
-                  margin: "0 -20px",
-                  padding: "0 20px"
-                }}></div>
-
-                {!isInvalidAddress && data && finalStops.length > 0 && (
-                  <div style={{ position: "relative" }}>
-                    <p
-                      className="dark:text-white"
-                      style={{
-                        margin: "8px 0", // Reduced margin
-                        marginTop: "-10px",
-                        textAlign: "center",
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        gap: "4px", // Tighter gap
-                        fontSize: "0.9rem", // Slightly smaller font size
-                        lineHeight: "1.2", // Compact line spacing
-                        marginBottom: "10px",
-                      }}
-                    >
-                      <span style={{ fontSize: "1.5rem", lineHeight: "1" }}>⏳</span>
-                      <strong style={{ fontSize: "1rem" }}>Updated:{updatedTimeString}</strong>
-                      {lastUpdatedTime && (
-                    <strong style={{ fontSize: "1rem"}}>
-                      {lastUpdatedTime}
-                    </strong>
-                      )}
-                      <span>(next refresh in <span ref={timerRef}>{timeRemaining}</span>s)</span>
-                    </p>
-                  </div>
-                )}
-
-                {isStopLoading && (
+                  flex: 1, // Added to ensure it takes up remaining space
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "flex-start",
+                  gap: "8px",
+                }}>
                   <div style={{
-                    position: "fixed",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    height: "4px",
-                    backgroundColor: "#ccc",
-                    zIndex: 1000,
-                    overflow: "hidden"
-                  }}>
+                    overflow: "hidden",
+                    maxWidth: "100vw",
+                    scrollSnapType: isMobile ? "x mandatory" : "none",
+                    margin: "0 -20px",
+                    padding: "0 20px"
+                  }}></div>
+
+                  {!isInvalidAddress && data && finalStops.length > 0 && (
+                    <div style={{ position: "relative" }}>
+                      <p
+                        className="dark:text-white"
+                        style={{
+                          margin: "8px 0", // Reduced margin
+                          marginTop: "-10px",
+                          textAlign: "center",
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          gap: "4px", // Tighter gap
+                          fontSize: "0.9rem", // Slightly smaller font size
+                          lineHeight: "1.2", // Compact line spacing
+                          marginBottom: "10px",
+                        }}
+                      >
+                        <span style={{ fontSize: "1.5rem", lineHeight: "1" }}>⏳</span>
+                        <strong style={{ fontSize: "1rem" }}>Updated:{updatedTimeString}</strong>
+                        {lastUpdatedTime && (
+                          <strong style={{ fontSize: "1rem" }}>
+                            {lastUpdatedTime}
+                          </strong>
+                        )}
+                        <span>(next refresh in <span ref={timerRef}>{timeRemaining}</span>s)</span>
+                      </p>
+                    </div>
+                  )}
+
+                  {isStopLoading && (
                     <div style={{
+                      position: "fixed",
+                      top: 0,
+                      left: 0,
                       width: "100%",
-                      height: "100%",
-                      backgroundColor: "#0078D7",
-                      animation: "progressBar 1s linear infinite"
-                    }} />
-                    <style>
-                      {`
+                      height: "4px",
+                      backgroundColor: "#ccc",
+                      zIndex: 1000,
+                      overflow: "hidden"
+                    }}>
+                      <div style={{
+                        width: "100%",
+                        height: "100%",
+                        backgroundColor: "#0078D7",
+                        animation: "progressBar 1s linear infinite"
+                      }} />
+                      <style>
+                        {`
                     @keyframes progressBar {
                       0% { transform: translateX(-100%); }
                       100% { transform: translateX(100%); }
                     }
                   `}
-                    </style>
-                  </div>
-                )}
-
-                <div style={{ position: 'relative' }}>
-                  {isMobile && (
-                    <>
-                      {isScrollableLeft && (
-                        <Image
-                          src="/public/icons/left_caret.png"
-                          alt="Scroll Left"
-                          style={{
-                            position: 'absolute',
-                            top: '50%',
-                            left: '10px',
-                            transform: 'translateY(-50%)',
-                            zIndex: 100,
-                            cursor: 'pointer',
-                            width: '24px',
-                            height: '24px',
-                            filter: 'drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.5))'
-                          }}
-                          onClick={() => {
-                            if (scrollContainerRef.current) {
-                              scrollContainerRef.current.scrollBy({ left: -200, behavior: 'smooth' });
-                            }
-                          }}
-                        />
-                      )}
-                      {isScrollableRight && (
-                        <Image
-                          src="/public/icons/right_caret.png"
-                          alt="Scroll Right"
-                          style={{
-                            position: 'absolute',
-                            top: '50%',
-                            right: '10px',
-                            transform: 'translateY(-50%)',
-                            zIndex: 100,
-                            cursor: 'pointer',
-                            width: '24px',
-                            height: '24px',
-                            filter: 'drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.5))'
-                          }}
-                          onClick={() => {
-                            if (scrollContainerRef.current) {
-                              scrollContainerRef.current.scrollBy({ left: 200, behavior: 'smooth' });
-                            }
-                          }}
-                        />
-                      )}
-                    </>
+                      </style>
+                    </div>
                   )}
 
-                  <div
-                    ref={scrollContainerRef}
-                    style={{
-                      display: "flex",
-                      overflowX: "auto",
-                      overflowY: "hidden",
-                      gap: "16px",
-                      touchAction: "pan-x",
-                      WebkitOverflowScrolling: "touch",
-                      scrollSnapType: "x mandatory",
-                      margin: "0 -20px",
-                      padding: "0 20px",
-                      height: isMobile ? "50vh" : "calc(100vh - 100px)",
-                      boxSizing: "border-box",
-                      position: "relative",
-                      overscrollBehavior: "auto",
-                      scrollbarWidth: "none",
-                      msOverflowStyle: "none",
-                    }}
-                  >
-
-                    {windowWidth !== null && data && finalStops.length === 0 && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        textAlign: 'center',
-                        padding: '20px'
-                      }}>
-                        <p style={{ marginBottom: '10px' }}>
-                          Whoops! Looks like the address you entered is invalid. Please enter a valid address.
-                        </p>
-                        <p style={{ color: '#666' }}>
-                          ex. 20 W 34th St. New York, New York 10001
-                        </p>
-                      </div>
+                  <div style={{ position: 'relative' }}>
+                    {isMobile && (
+                      <>
+                        {isScrollableLeft && (
+                          <Image
+                            src="/public/icons/left_caret.png"
+                            alt="Scroll Left"
+                            style={{
+                              position: 'absolute',
+                              top: '50%',
+                              left: '10px',
+                              transform: 'translateY(-50%)',
+                              zIndex: 100,
+                              cursor: 'pointer',
+                              width: '24px',
+                              height: '24px',
+                              filter: 'drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.5))'
+                            }}
+                            onClick={() => {
+                              if (scrollContainerRef.current) {
+                                scrollContainerRef.current.scrollBy({ left: -200, behavior: 'smooth' });
+                              }
+                            }}
+                          />
+                        )}
+                        {isScrollableRight && (
+                          <Image
+                            src="/public/icons/right_caret.png"
+                            alt="Scroll Right"
+                            style={{
+                              position: 'absolute',
+                              top: '50%',
+                              right: '10px',
+                              transform: 'translateY(-50%)',
+                              zIndex: 100,
+                              cursor: 'pointer',
+                              width: '24px',
+                              height: '24px',
+                              filter: 'drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.5))'
+                            }}
+                            onClick={() => {
+                              if (scrollContainerRef.current) {
+                                scrollContainerRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+                              }
+                            }}
+                          />
+                        )}
+                      </>
                     )}
 
-                    {finalStops.map((stop: any, index: number) => {
-                      const isFirstTile = index === 0;
-                      const isLastTile = index === finalStops.length - 1;
-                      const arrivalsArray = data.arrivals?.[stop.stopId] || [];
-                      const hasBuses = arrivalsArray.length > 0;
-                      const routeMap = getStopArrivals(stop.stopId);
-                      const hasMultipleRoutes = Object.keys(routeMap).length > 1;
+                    <div
+                      ref={scrollContainerRef}
+                      style={{
+                        display: "flex",
+                        overflowX: "auto",
+                        overflowY: "hidden",
+                        gap: "16px",
+                        touchAction: "pan-x",
+                        WebkitOverflowScrolling: "touch",
+                        scrollSnapType: "x mandatory",
+                        margin: "0 -20px",
+                        padding: "0 20px",
+                        height: isMobile ? "50vh" : "calc(100vh - 100px)",
+                        boxSizing: "border-box",
+                        position: "relative",
+                        overscrollBehavior: "auto",
+                        scrollbarWidth: "none",
+                        msOverflowStyle: "none",
+                      }}
+                    >
+
+                      {windowWidth !== null && data && finalStops.length === 0 && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -50%)',
+                          textAlign: 'center',
+                          padding: '20px'
+                        }}>
+                          <p style={{ marginBottom: '10px' }}>
+                            Whoops! Looks like the address you entered is invalid. Please enter a valid address.
+                          </p>
+                          <p style={{ color: '#666' }}>
+                            ex. 20 W 34th St. New York, New York 10001
+                          </p>
+                        </div>
+                      )}
+
+                      {finalStops.map((stop: any, index: number) => {
+                        const isFirstTile = index === 0;
+                        const isLastTile = index === finalStops.length - 1;
+                        const arrivalsArray = data.arrivals?.[stop.stopId] || [];
+                        const hasBuses = arrivalsArray.length > 0;
+                        const routeMap = getStopArrivals(stop.stopId);
+                        const hasMultipleRoutes = Object.keys(routeMap).length > 1;
 
 
-                      return (
-                        <ScrollableTile
-                          key={stop.stopId}
-                          style={{
-                            scrollSnapAlign: isMobile ? 'center' : 'none',
-                            width: isMobile ? 'calc(100vw - 40px)' : '360px',
-                            minWidth: isMobile ? 'calc(100vw - 40px)' : '360px',
-                            maxWidth: '360px',
-                            height: isMobile ? '50vh' : '100%',
-                            backgroundColor: '#D3D3D3',
-                            borderRadius: '8px',
-                            boxSizing: 'border-box',
-                            marginBottom: '20px',
-                            color: 'black',
-                            flexShrink: 0,
-                            display: 'flex',
-                            flexDirection: 'column',
-                          }}
-                        >
-                          {/* Navigation Container - Only render if mobile and has arrows */}
-                          {isMobile && (
+                        return (
+                          <ScrollableTile
+                            key={stop.stopId}
+                            style={{
+                              scrollSnapAlign: isMobile ? 'center' : 'none',
+                              width: isMobile ? 'calc(100vw - 40px)' : '360px',
+                              minWidth: isMobile ? 'calc(100vw - 40px)' : '360px',
+                              maxWidth: '360px',
+                              height: isMobile ? '50vh' : '100%',
+                              backgroundColor: '#D3D3D3',
+                              borderRadius: '8px',
+                              boxSizing: 'border-box',
+                              marginBottom: '20px',
+                              color: 'black',
+                              flexShrink: 0,
+                              display: 'flex',
+                              flexDirection: 'column',
+                            }}
+                          >
+                            {/* Navigation Container - Only render if mobile and has arrows */}
+                            {isMobile && (
+                              <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                height: '36px', // Fixed height for consistency
+                                marginBottom: '8px',
+                                padding: '0 4px'
+                              }}>
+                                {/* Left Arrow or Spacer */}
+                                <div style={{ width: '30px', height: '30px', display: 'flex', alignItems: 'center' }}>
+                                  {index > 0 && (
+                                    <button
+                                      onClick={() => {
+                                        if (scrollContainerRef.current) {
+                                          const fullWidth = window.innerWidth - 40; // Same as calc(100vw - 40px)
+                                          const scrollAmount = fullWidth + 16; // Add the gap width
+                                          scrollContainerRef.current.scrollBy({
+                                            left: -scrollAmount,
+                                            behavior: 'smooth'
+                                          });
+                                        }
+                                      }}
+                                      style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        fontSize: '20px',
+                                        padding: '0',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        width: '100%',
+                                        height: '100%'
+                                      }}
+                                    >
+                                      👈
+                                    </button>
+                                  )}
+                                </div>
+
+                                {/* Center Spacer */}
+                                <div style={{ flex: 1 }} />
+
+                                {/* Right Arrow or Spacer */}
+                                <div style={{ width: '30px', height: '30px', display: 'flex', alignItems: 'center' }}>
+                                  {!isLastTile && (
+                                    <button
+                                      onClick={() => {
+                                        if (scrollContainerRef.current) {
+                                          const fullWidth = window.innerWidth - 40; // Same as calc(100vw - 40px)
+                                          const scrollAmount = fullWidth + 16; // Add the gap width
+                                          scrollContainerRef.current.scrollBy({
+                                            left: scrollAmount,
+                                            behavior: 'smooth'
+                                          });
+                                        }
+                                      }}
+                                      style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        fontSize: '20px',
+                                        padding: '0',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        width: '100%',
+                                        height: '100%'
+                                      }}
+                                    >
+                                      👉
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+
+                            <h2 style={{
+                              fontSize: "1.3rem",
+                              fontWeight: "bold",
+                              margin: "0", // Reset any margin
+                              padding: "8px", // Ensure padding is consistent
+                            }}>
+                              <span style={{ fontSize: "1.8rem" }}>🚏</span>
+                              {stop.stopName}{" "}
+                              {stop.distance != null
+                                ? `(${stop.distance} miles away)`
+                                : "(distance unknown)"}
+                            </h2>
+
                             <div style={{
                               display: 'flex',
-                              justifyContent: 'space-between',
+                              flexDirection: 'column',
                               alignItems: 'center',
-                              height: '36px', // Fixed height for consistency
-                              marginBottom: '8px',
-                              padding: '0 4px'
+                              justifyContent: 'center',
+                              gap: '8px',
+                              // marginTop: '4px',
                             }}>
-                              {/* Left Arrow or Spacer */}
-                              <div style={{ width: '30px', height: '30px', display: 'flex', alignItems: 'center' }}>
-                                {index > 0 && (
-                                  <button
-                                    onClick={() => {
-                                      if (scrollContainerRef.current) {
-                                        const fullWidth = window.innerWidth - 40; // Same as calc(100vw - 40px)
-                                        const scrollAmount = fullWidth + 16; // Add the gap width
-                                        scrollContainerRef.current.scrollBy({ 
-                                          left: -scrollAmount, 
-                                          behavior: 'smooth' 
-                                        });
-                                      }
-                                    }}
-                                    style={{
-                                      background: 'none',
-                                      border: 'none',
-                                      cursor: 'pointer',
-                                      fontSize: '20px',
-                                      padding: '0',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      width: '100%',
-                                      height: '100%'
-                                    }}
-                                  >
-                                    👈
-                                  </button>
-                                )}
-                              </div>
-
-                              {/* Center Spacer */}
-                              <div style={{ flex: 1 }} />
-
-                              {/* Right Arrow or Spacer */}
-                              <div style={{ width: '30px', height: '30px', display: 'flex', alignItems: 'center' }}>
-                                {!isLastTile && (
-                                  <button
-                                    onClick={() => {
-                                      if (scrollContainerRef.current) {
-                                        const fullWidth = window.innerWidth - 40; // Same as calc(100vw - 40px)
-                                        const scrollAmount = fullWidth + 16; // Add the gap width
-                                        scrollContainerRef.current.scrollBy({ 
-                                          left: scrollAmount, 
-                                          behavior: 'smooth' 
-                                        });
-                                      }
-                                    }}
-                                    style={{
-                                      background: 'none',
-                                      border: 'none',
-                                      cursor: 'pointer',
-                                      fontSize: '20px',
-                                      padding: '0',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      width: '100%',
-                                      height: '100%'
-                                    }}
-                                  >
-                                    👉
-                                  </button>
-                                )}
-                              </div>
+                              <span style={{
+                                fontWeight: 'bold',
+                                fontSize: '1rem',
+                                color: '#333',
+                              }}>
+                                Directions to this stop:
+                              </span>
+                              <NavigationButtons
+                                stopName={stop.stopName}
+                                lat={Number(stop.lat)}
+                                lon={Number(stop.lon)}
+                              />
                             </div>
-                          )}
 
+                            {!hasBuses && (
+                              <p style={{
+                                fontStyle: "italic",
+                                display: "flex",
+                                justifyContent: "center",
+                                alignItems: "center",
+                                marginTop: 50,
+                              }}>
+                                No buses en-route to this stop
+                              </p>
+                            )}
 
-                          <h2 style={{
-                            fontSize: "1.3rem",
-                            fontWeight: "bold",
-                            margin: "0", // Reset any margin
-                            padding: "8px", // Ensure padding is consistent
-                          }}>
-                            <span style={{ fontSize: "1.8rem" }}>🚏</span>
-                            {stop.stopName}{" "}
-                            {stop.distance != null
-                              ? `(${stop.distance} miles away)`
-                              : "(distance unknown)"}
-                          </h2>
-
-                          <div style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '8px',
-                            // marginTop: '4px',
-                          }}>
-                            <span style={{
-                              fontWeight: 'bold',
-                              fontSize: '1rem',
-                              color: '#333',
-                            }}>
-                              Directions to this stop:
-                            </span>
-                            <NavigationButtons
-                              stopName={stop.stopName}
-                              lat={Number(stop.lat)}
-                              lon={Number(stop.lon)}
-                            />
-                          </div>
-
-                          {!hasBuses && (
-                            <p style={{
-                              fontStyle: "italic",
-                              display: "flex",
-                              justifyContent: "center",
-                              alignItems: "center",
-                              marginTop: 50,
-                            }}>
-                              No buses en-route to this stop
-                            </p>
-                          )}
-
-                          {hasBuses && (
-                            <div style={{ flex: 1 }}
-                            >
-                              {Object.entries(routeMap).map(([routeName, directions]) => (
-                                <div
-                                  key={routeName}
-                                  style={{
-                                    margin: "16px auto",
-                                    backgroundColor: "#2360A5",
-                                    borderRadius: "8px",
-                                    color: "white",
-                                    fontWeight: "bold",
-                                    padding: "8px",
-                                    display: "flex",
-                                    width: "90%",
-                                    flexDirection: "column",
-                                    alignItems: "center",
-                                    position: "relative",
-                                  }}
-                                >
+                            {hasBuses && (
+                              <div style={{ flex: 1 }}
+                              >
+                                {Object.entries(routeMap).map(([routeName, directions]) => (
                                   <div
+                                    key={routeName}
                                     style={{
-                                      marginBottom: 8,
-                                      cursor: 'pointer',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      gap: '8px'
-                                    }}
-                                    onClick={() => {
-                                      setSelectedRoute(routeName);
-                                      // openRouteMapPopup(routeName);
+                                      margin: "16px auto",
+                                      backgroundColor: "#2360A5",
+                                      borderRadius: "8px",
+                                      color: "white",
+                                      fontWeight: "bold",
+                                      padding: "8px",
+                                      display: "flex",
+                                      width: "90%",
+                                      flexDirection: "column",
+                                      alignItems: "center",
+                                      position: "relative",
                                     }}
                                   >
-                                    {routeName}
-                                    {routesWithAlerts[routeName] && (
-                                      <span
-                                        onClick={() => {
-                                          fetchServiceAlert(routeName);
-                                        }}
-                                        style={{
-                                          marginLeft: "4px",
-                                          cursor: "pointer",
-                                          filter: 'drop-shadow(0px 0px 8px rgba(200, 0, 0, 1))'
-                                        }}
-                                        title="View Service Alerts"
-                                      >
-                                        🚨
-                                      </span>
-                                    )}
-                                  </div>
+                                    <div
+                                      style={{
+                                        marginBottom: 8,
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '8px'
+                                      }}
+                                      onClick={() => {
+                                        setSelectedRoute(routeName);
+                                        // openRouteMapPopup(routeName);
+                                      }}
+                                    >
+                                      {routeName}
+                                      {routesWithAlerts[routeName] && (
+                                        <span
+                                          onClick={() => {
+                                            fetchServiceAlert(routeName);
+                                          }}
+                                          style={{
+                                            marginLeft: "4px",
+                                            cursor: "pointer",
+                                            filter: 'drop-shadow(0px 0px 8px rgba(200, 0, 0, 1))'
+                                          }}
+                                          title="View Service Alerts"
+                                        >
+                                          🚨
+                                        </span>
+                                      )}
+                                    </div>
 
-                                  {Object.entries(directions).map(
-                                    ([directionKey, visitsArr]) => (
-                                      <div
-                                        key={directionKey}
-                                        style={{
-                                          marginTop: 8,
-                                          backgroundColor: "white",
-                                          color: "black",
-                                          fontWeight: "normal",
-                                          borderRadius: 8,
-                                          padding: 8,
-                                          width: "100%",
-                                          maxWidth: 300,
-                                          textAlign: "center",
-                                        }}
-                                      >
-                                        <strong> 📍 {directionKey}</strong>
-                                        <ul style={{ listStyle: "none", paddingLeft: 0 }}>
-                                          {visitsArr.sort((a: any, b: any) => {
-                                            const aStops = a.MonitoredVehicleJourney?.MonitoredCall?.Extensions?.Distances?.StopsFromCall || 0;
-                                            const bStops = b.MonitoredVehicleJourney?.MonitoredCall?.Extensions?.Distances?.StopsFromCall || 0;
-                                            return aStops - bStops;
-                                          })
-                                            .map((visit: any, i: number) => {
-                                              const mvj = visit.MonitoredVehicleJourney;
-                                              const vehicleRef = visit.vehicleRef || 'Unknown VehicleRef';
-                                              let stopsAway = -1;
-                                              const distances =
-                                                mvj?.MonitoredCall?.Extensions?.Distances;
-                                              if (
-                                                distances &&
-                                                typeof distances.StopsFromCall === "number"
-                                              ) {
-                                                stopsAway = distances.StopsFromCall;
-                                              }
+                                    {Object.entries(directions).map(
+                                      ([directionKey, visitsArr]) => (
+                                        <div
+                                          key={directionKey}
+                                          style={{
+                                            marginTop: 8,
+                                            backgroundColor: "white",
+                                            color: "black",
+                                            fontWeight: "normal",
+                                            borderRadius: 8,
+                                            padding: 8,
+                                            width: "100%",
+                                            maxWidth: 300,
+                                            textAlign: "center",
+                                          }}
+                                        >
+                                          <strong> 📍 {directionKey}</strong>
+                                          <ul style={{ listStyle: "none", paddingLeft: 0 }}>
+                                            {visitsArr.sort((a: any, b: any) => {
+                                              const aStops = a.MonitoredVehicleJourney?.MonitoredCall?.Extensions?.Distances?.StopsFromCall || 0;
+                                              const bStops = b.MonitoredVehicleJourney?.MonitoredCall?.Extensions?.Distances?.StopsFromCall || 0;
+                                              return aStops - bStops;
+                                            })
+                                              .map((visit: any, i: number) => {
+                                                const mvj = visit.MonitoredVehicleJourney;
+                                                const vehicleRef = visit.vehicleRef || 'Unknown VehicleRef';
+                                                let stopsAway = -1;
+                                                const distances =
+                                                  mvj?.MonitoredCall?.Extensions?.Distances;
+                                                if (
+                                                  distances &&
+                                                  typeof distances.StopsFromCall === "number"
+                                                ) {
+                                                  stopsAway = distances.StopsFromCall;
+                                                }
 
-                                              let arrivalTime = "";
-                                              const expectedTime =
-                                                mvj?.MonitoredCall?.ExpectedArrivalTime;
-                                              if (expectedTime) {
-                                                arrivalTime = new Date(
-                                                  expectedTime
-                                                ).toLocaleTimeString([], {
-                                                  hour: "2-digit",
-                                                  minute: "2-digit",
-                                                });
-                                              }
+                                                let arrivalTime = "";
+                                                const expectedTime =
+                                                  mvj?.MonitoredCall?.ExpectedArrivalTime;
+                                                if (expectedTime) {
+                                                  arrivalTime = new Date(
+                                                    expectedTime
+                                                  ).toLocaleTimeString([], {
+                                                    hour: "2-digit",
+                                                    minute: "2-digit",
+                                                  });
+                                                }
 
-                                              const occupancy = mvj?.Occupancy || null;
+                                                const occupancy = mvj?.Occupancy || null;
 
-                                              let minutesAwayString: string | null = null;
-                                              if (expectedTime) {
-                                                minutesAwayString = getMinutesAway(
-                                                  expectedTime
-                                                );
-                                              }
-                                              return (
-                                                <li
-                                                  key={i}
-                                                  onClick={async () => {
-                                                    try {
+                                                let minutesAwayString: string | null = null;
+                                                if (expectedTime) {
+                                                  minutesAwayString = getMinutesAway(
+                                                    expectedTime
+                                                  );
+                                                }
+                                                return (
+                                                  <li
+                                                    key={i}
+                                                    onClick={async () => {
+                                                      try {
                                                         const stopArrivals = data.arrivals?.[stop.stopId] || [];
-                                                
+
                                                         // Attempt to match VehicleRef including prefix
                                                         const selectedArrival = stopArrivals.find((arrival: any) => {
-                                                            const arrivalVehicleRef = arrival?.MonitoredVehicleJourney?.VehicleRef?.toString()?.trim();
-                                                            const clickedVehicleRef = visit.vehicleRef?.toString()?.trim();
-                                                            return (
-                                                                arrivalVehicleRef === clickedVehicleRef ||
-                                                                arrivalVehicleRef?.includes(clickedVehicleRef) ||
-                                                                clickedVehicleRef?.includes(arrivalVehicleRef)
-                                                            );
+                                                          const arrivalVehicleRef = arrival?.MonitoredVehicleJourney?.VehicleRef?.toString()?.trim();
+                                                          const clickedVehicleRef = visit.vehicleRef?.toString()?.trim();
+                                                          return (
+                                                            arrivalVehicleRef === clickedVehicleRef ||
+                                                            arrivalVehicleRef?.includes(clickedVehicleRef) ||
+                                                            clickedVehicleRef?.includes(arrivalVehicleRef)
+                                                          );
                                                         });
-                                                
+
                                                         if (!selectedArrival) {
-                                                            console.warn('⚠️ No matching arrival found for VehicleRef:', visit.vehicleRef);
-                                                            console.warn('🚨 Available VehicleRefs in StopArrivals:', stopArrivals.map((a: any) => a?.MonitoredVehicleJourney?.VehicleRef));
+                                                          console.warn('⚠️ No matching arrival found for VehicleRef:', visit.vehicleRef);
+                                                          console.warn('🚨 Available VehicleRefs in StopArrivals:', stopArrivals.map((a: any) => a?.MonitoredVehicleJourney?.VehicleRef));
                                                         }
-                                                
+
                                                         // Get direction from selectedArrival
                                                         const direction = selectedArrival?.MonitoredVehicleJourney?.DirectionRef;
-                                                        
+
                                                         // Add these diagnostic logs
-                                                                                                                  
-                                                          // console.log('🚌 Direction Resolution:', {
-                                                          //   destination: selectedArrival?.MonitoredVehicleJourney?.DestinationName,
-                                                          //   rawDirection: direction,
-                                                          //   vehicleRef: visit.vehicleRef
-                                                          // });
-                                                
+
+                                                        // console.log('🚌 Direction Resolution:', {
+                                                        //   destination: selectedArrival?.MonitoredVehicleJourney?.DestinationName,
+                                                        //   rawDirection: direction,
+                                                        //   vehicleRef: visit.vehicleRef
+                                                        // });
+
                                                         const stops = await fetchRouteStops(
-                                                          routeName, 
+                                                          routeName,
                                                           stop.stopName,
                                                           selectedArrival?.MonitoredVehicleJourney?.DestinationName || "",
                                                           direction || "0"
-                                                      );
-                                                
+                                                        );
+
                                                         // Log after API call
                                                         // console.log('🚏 Route Stops Response:', {
                                                         //     routeName,
@@ -1845,149 +1845,154 @@ useEffect(() => {
                                                         //     firstStop: stops[0],
                                                         //     lastStop: stops[stops.length - 1]
                                                         // });
-                                                
+
                                                         let stopsAway = 0;
-                                                
+
                                                         if (selectedArrival) {
-                                                            const distances = selectedArrival?.MonitoredVehicleJourney?.MonitoredCall?.Extensions?.Distances;
-                                                            if (distances?.StopsFromCall != null) {
-                                                                stopsAway = distances.StopsFromCall;
-                                                            } else if (distances?.DistanceFromCall != null) {
-                                                                const averageStopDistance = 500; // Average stop distance in meters
-                                                                stopsAway = Math.round(distances.DistanceFromCall / averageStopDistance);
-                                                            }
+                                                          const distances = selectedArrival?.MonitoredVehicleJourney?.MonitoredCall?.Extensions?.Distances;
+                                                          if (distances?.StopsFromCall != null) {
+                                                            stopsAway = distances.StopsFromCall;
+                                                          } else if (distances?.DistanceFromCall != null) {
+                                                            const averageStopDistance = 500; // Average stop distance in meters
+                                                            stopsAway = Math.round(distances.DistanceFromCall / averageStopDistance);
+                                                          }
                                                         }
-                                                
+
                                                         // console.log(
                                                         //     `🚍 Stops Away Calculated: ${stopsAway}, VehicleRef: ${visit.vehicleRef || 'Unknown VehicleRef'}`
                                                         // );
-                                                
-                                                        showBusInfo(
-                                                            routeName,
-                                                            stops,
-                                                            stopsAway,
-                                                            selectedArrival?.MonitoredVehicleJourney?.DestinationName || "Unknown Destination",
-                                                            stop.stopName,
-                                                            selectedStop || stop.stopName,
-                                                            stopsAway,
-                                                            visit.vehicleRef // Pass VehicleRef explicitly
-                                                        );
-                                                    } catch (error) {
-                                                        console.error('🚨 Error fetching stop data:', error);
-                                                    }
-                                                }}
 
-                                                style={{
-                                                  margin: "8px 0",
-                                                  // background: "linear-gradient(145deg, #ffffff 50%, #f0f0f0 100%)", // Subtle gradient from white to light gray
-                                                  background: "white",
-                                                  borderRadius: "8px",
-                                                  boxShadow: "inset 0 2px 4px rgba(255, 255, 255, 100), 0 2px 8px rgba(0, 0, 0, 0.15)", // Combines inner highlight and outer shadow
-                                                  padding: "12px",
-                                                  textAlign: "center",
-                                                  cursor: "pointer",
-                                                  transition: "transform 0.2s, box-shadow 0.2s",
-                                                  position: "relative", // For the pseudo-element
-                                                  overflow: "hidden", // To contain the pseudo-element
-                                                }}
-                                                >
-                                                  <div style={{
-    position: "absolute",
-    top: "8px",
-    right: "8px",
-    width: "20px",
-    height: "20px"
-  }}>
-    <img 
-      src="/icons/info.svg" 
-      alt="Info"
-      style={{
-        width: "100%",
-        height: "100%",
-        opacity: 0.6,
-        transition: "opacity 0.2s"
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.opacity = "1";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.opacity = "0.6";
-      }}
-    />
-  </div>
-                                                  <div style={{
-                                                    fontWeight: "bold",
-                                                    color: stopsAway <= 1 ? "green" : stopsAway <= 5 ? "orange" : "inherit"
-                                                  }}>
-                                                    {stopsAway === 0 ? (
-                                                      <span>
-                                                        about <strong>&lt;1</strong> stop away
-                                                      </span>
-                                                    ) : stopsAway === 1 ? (
-                                                      <span>
-                                                        about <strong>1</strong> stop away
-                                                      </span>
-                                                    ) : stopsAway > 1 ? (
-                                                      <span>
-                                                        about <strong>{stopsAway}</strong> stops away
-                                                      </span>
-                                                    ) : (
-                                                      <>?? stops away</>
-                                                    )}
-                                                  </div>
-                                                  {arrivalTime ? (
-                                                    <div style={{ marginTop: "4px", fontSize: "0.9em" }}>
-                                                      Arriving at approx <strong>{arrivalTime}</strong>
-                                                      {minutesAwayString && (
-                                                        <> ({minutesAwayString})</>
+                                                        showBusInfo(
+                                                          routeName,
+                                                          stops,
+                                                          stopsAway,
+                                                          selectedArrival?.MonitoredVehicleJourney?.DestinationName || "Unknown Destination",
+                                                          stop.stopName,
+                                                          selectedStop || stop.stopName,
+                                                          stopsAway,
+                                                          visit.vehicleRef // Pass VehicleRef explicitly
+                                                        );
+                                                      } catch (error) {
+                                                        console.error('🚨 Error fetching stop data:', error);
+                                                      }
+                                                    }}
+                                                    style={{
+                                                      margin: "8px 0",
+                                                      // background: "linear-gradient(145deg, #ffffff 50%, #f0f0f0 100%)", // Subtle gradient from white to light gray
+                                                      background: "white",
+                                                      borderRadius: "8px",
+                                                      boxShadow: "inset 0 2px 4px rgba(255, 255, 255, 100), 0 2px 8px rgba(0, 0, 0, 0.15)", // Combines inner highlight and outer shadow
+                                                      padding: "12px",
+                                                      textAlign: "center",
+                                                      cursor: "pointer",
+                                                      transition: "transform 0.2s, box-shadow 0.2s",
+                                                      position: "relative", // For the pseudo-element
+                                                      overflow: "hidden", // To contain the pseudo-element
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                      e.currentTarget.style.backgroundColor = "#f5f5f5";
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                      e.currentTarget.style.backgroundColor = "white";
+                                                    }}
+                                                  >
+                                                    <div style={{
+                                                      position: "absolute",
+                                                      top: "8px",
+                                                      right: "8px",
+                                                      width: "20px",
+                                                      height: "20px"
+                                                    }}>
+                                                      <img
+                                                        src="/icons/info.svg"
+                                                        alt="Info"
+                                                        style={{
+                                                          width: "100%",
+                                                          height: "100%",
+                                                          opacity: 0.6,
+                                                          transition: "opacity 0.2s"
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                          e.currentTarget.style.opacity = "1";
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                          e.currentTarget.style.opacity = "0.6";
+                                                        }}
+                                                      />
+                                                    </div>
+                                                    <div style={{
+                                                      fontWeight: "bold",
+                                                      color: stopsAway <= 1 ? "green" : stopsAway <= 5 ? "orange" : "inherit"
+                                                    }}>
+                                                      {stopsAway === 0 ? (
+                                                        <span>
+                                                          about <strong>&lt;1</strong> stop away
+                                                        </span>
+                                                      ) : stopsAway === 1 ? (
+                                                        <span>
+                                                          about <strong>1</strong> stop away
+                                                        </span>
+                                                      ) : stopsAway > 1 ? (
+                                                        <span>
+                                                          about <strong>{stopsAway}</strong> stops away
+                                                        </span>
+                                                      ) : (
+                                                        <>?? stops away</>
                                                       )}
                                                     </div>
-                                                  ) : (
-                                                    <div style={{ marginTop: "4px", fontSize: "0.9em" }}>
-                                                      Arrival time unknown
-                                                    </div>
-                                                  )}
-                                                  {occupancy && (
-                                                    <div style={{ marginTop: "4px", fontSize: "0.9em" }}>
-                                                      Occupancy: <strong>{occupancy}</strong>
-                                                    </div>
-                                                  )}
-                                                  {vehicleRef && (
-                                                    <div style={{ marginTop: "4px", fontSize: "0.9em", color: "#757575" }}>
-                                                      Bus ID: <strong>{vehicleRef}</strong>
-                                                    </div>
-                                                  )}
-                                                </li>
-                                              );
-                                            })}
-                                        </ul>
-                                      </div>
-                                    )
-                                  )}
-                                </div>
-                              ))}
-                              {!hasMultipleRoutes && hasBuses && (
-                                <p style={{
-                                  marginTop: 8,
-                                  fontStyle: "italic",
-                                  color: "black",
-                                  fontSize: "0.9em"
-                                }}>
-                                  Additional routes will be shown here if available
-                                </p>
-                              )}
-                            </div>
-                          )}
-                        </ScrollableTile>
-                      );
-                    })}
+                                                    {arrivalTime ? (
+                                                      <div style={{ marginTop: "4px", fontSize: "0.9em" }}>
+                                                        Arriving at approx <strong>{arrivalTime}</strong>
+                                                        {minutesAwayString && (
+                                                          <> ({minutesAwayString})</>
+                                                        )}
+                                                      </div>
+                                                    ) : (
+                                                      <div style={{ marginTop: "4px", fontSize: "0.9em" }}>
+                                                        Arrival time unknown
+                                                      </div>
+                                                    )}
+                                                    {occupancy && (
+                                                      <div style={{ marginTop: "4px", fontSize: "0.9em" }}>
+                                                        Occupancy: <strong>{occupancy}</strong>
+                                                      </div>
+                                                    )}
+                                                    {vehicleRef && (
+                                                      <div style={{ marginTop: "4px", fontSize: "0.9em", color: "#757575" }}>
+                                                        Bus ID: <strong>{vehicleRef}</strong>
+                                                      </div>
+                                                    )}
+                                                  </li>
+                                                );
+                                              })}
+                                          </ul>
+                                        </div>
+                                      )
+                                    )}
+                                  </div>
+                                ))}
+                                {!hasMultipleRoutes && hasBuses && (
+                                  <p style={{
+                                    marginTop: 8,
+                                    fontStyle: "italic",
+                                    color: "black",
+                                    fontSize: "0.9em"
+                                  }}>
+                                    Additional routes will be shown here if available
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </ScrollableTile>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-        </BusContent>
-      </BusPopupProvider>
+            )}
+          </BusContent>
+        </BusPopupProvider>
       </div>
     </Suspense>
   );
