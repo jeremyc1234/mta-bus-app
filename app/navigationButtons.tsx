@@ -82,7 +82,7 @@ const NavigationButtons: React.FC<NavigationButtonsProps> = ({ stopName }) => {
       >
         <div style={imageWrapperStyle}>
           <Image
-            src="/icons/google_maps_icon.png"
+            src="/icons/google_maps_icon.svg"
             alt="Google Maps"
             width={25}
             height={25}
@@ -102,7 +102,7 @@ const NavigationButtons: React.FC<NavigationButtonsProps> = ({ stopName }) => {
         >
           <div style={imageWrapperStyle}>
             <Image
-              src="/icons/apple_maps_icon.png"
+              src="/icons/apple_maps_icon.svg"
               alt="Apple Maps"
               width={25}
               height={25}
