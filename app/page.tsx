@@ -442,48 +442,83 @@ const HomeContent = () => {
     setDefaultLocation();
   };
 
-  useEffect(() => {
-    let isActive = true;
-    console.log('🔄 Location changed in page.tsx:', { lat: location.lat, lon: location.lon });
+useEffect(() => {
+  let isActive = true;
+  const controller = new AbortController();
 
-    const fetchData = async () => {
-      if (!location.lat || !location.lon) {
-        console.log('⚠️ No location data available, skipping fetch');
+  const fetchData = async () => {
+    if (!location.lat || !location.lon) {
+      console.log('⚠️ No location data available, skipping fetch');
+      return;
+    }
+
+    // Set loading state
+    setLoadingState(prev => ({
+      ...prev,
+      isLoading: !isRefreshing
+    }));
+
+    try {
+      // Clear existing data before fetching new data
+      if (isActive) setData(null);
+
+      console.log('📡 Fetching bus data for location:', { lat: location.lat, lon: location.lon });
+      
+      const response = await fetch(
+        `/api/busdata?lat=${location.lat}&lon=${location.lon}`,
+        { signal: controller.signal }
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}`);
+      }
+
+      const json = await response.json();
+      
+      // Only update state if component is still mounted
+      if (isActive) {
+        setData(json);
+        setError(null);
+        
+        const now = new Date();
+        const formattedTime = now.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true
+        });
+        setLastUpdatedTime(formattedTime);
+      }
+    } catch (error) {
+      if (error === 'AbortError') {
+        console.log('Fetch aborted');
         return;
       }
-
-      // Set loading state
-      setLoadingState(prev => ({
-        ...prev,
-        isLoading: !isRefreshing
-      }));
-
-      try {
-        // Clear existing data before fetching new data
-        setData(null);
-
-        console.log('📡 Fetching bus data for location:', { lat: location.lat, lon: location.lon });
-        await fetchBusData(location.lat, location.lon, isRefreshing);
-      } catch (error) {
-        console.error('Error fetching bus data:', error);
-        setError('Failed to fetch bus data');
-      } finally {
-        if (isActive) {
-          setLoadingState(prev => ({
-            ...prev,
-            isLoading: false,
-            isRefreshing: false
-          }));
-        }
+      console.error('❌ Fetch error:', error);
+      if (isActive) {
+        setError('Failed to load bus data');
       }
-    };
+    } finally {
+      if (isActive) {
+        setLoadingState(prev => ({
+          ...prev,
+          isLoading: false,
+          isRefreshing: false
+        }));
+      }
+    }
+  };
 
+  // Debounce the fetch to prevent rapid consecutive calls
+  const timeoutId = setTimeout(() => {
     fetchData();
+  }, 100);
 
-    return () => {
-      isActive = false;
-    };
-  }, [location.lat, location.lon, isRefreshing]);
+  return () => {
+    isActive = false;
+    controller.abort();
+    clearTimeout(timeoutId);
+  };
+}, [location.lat, location.lon, isRefreshing]);
 
   useEffect(() => {
     setIsMobile(window.matchMedia("(pointer: coarse)").matches);
