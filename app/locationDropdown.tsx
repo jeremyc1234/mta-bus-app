@@ -29,7 +29,30 @@ interface LocationDropdownProps {
   isLocationChanging: boolean;
   setIsLocationChanging: (value: boolean) => void;
 }  
-
+const ClearIndicator = (props: any) => {
+  const {
+    children = "×", // Default is an "x"
+    getStyles,
+    innerRef,
+    innerProps,
+  } = props;
+  return (
+    <div
+      {...innerProps}
+      ref={innerRef}
+      style={{
+        ...getStyles("clearIndicator", props),
+        cursor: "pointer",
+        padding: "0 8px",
+        fontSize: "1.2rem",
+        color: "#888",
+      }}
+      title="Clear"
+    >
+      {children}
+    </div>
+  );
+};
 const LocationDropdown: React.FC<LocationDropdownProps> = ({ 
   onLocationChange,
   isLocationChanging,
@@ -48,7 +71,7 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
   console.log("📍 isLocationChanging in LocationDropdown:", isLocationChanging);
   const initializeDefaultRef = useRef(false);
   const onLocationChangeRef = useRef(onLocationChange);
-
+  const [menuIsOpen, setMenuIsOpen] = useState(false);
 const [addressSuggestions, setAddressSuggestions] = useState<Array<{
     value: { lat: number; lon: number; label: string };
     label: string;
@@ -190,12 +213,17 @@ const [addressSuggestions, setAddressSuggestions] = useState<Array<{
 
   const handleInputChange = (newVal: string, { action }: { action: string }) => {
     if (action === 'input-change') {
-      // The user is typing text
       setInputValue(newVal);
+      setMenuIsOpen(true); // Open the dropdown when input changes
     }
   };
 
   const handleSelectChange = async (selectedOption: LocationSelectOption | null) => {
+    if (!selectedOption) {
+      // Clear the input and keep the dropdown open
+      setInputValue('');
+      return;
+    }
     if (selectedOption) {
       // Update all states in one batch
       await Promise.all([
@@ -226,7 +254,6 @@ const [addressSuggestions, setAddressSuggestions] = useState<Array<{
       }, 1000);
     }
   };
-
 
   useEffect(() => {
     if (selectedValue) {
@@ -340,6 +367,7 @@ const [addressSuggestions, setAddressSuggestions] = useState<Array<{
 
   return (
     <Select
+      components={{ ClearIndicator }}
       options={allOptions}
       styles={customStyles}
       inputValue={inputValue}
@@ -348,6 +376,7 @@ const [addressSuggestions, setAddressSuggestions] = useState<Array<{
       onKeyDown={handleKeyDown}
       isLoading={isLoading}
       value={selectedValue}
+      isClearable
       placeholder="Search location or address..."
       noOptionsMessage={() => null} // This will always show options
       filterOption={(option: any, input: string) => {
@@ -366,6 +395,9 @@ const [addressSuggestions, setAddressSuggestions] = useState<Array<{
       classNamePrefix="location-select"
       menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
       menuPosition="fixed"
+      menuIsOpen={menuIsOpen} // Dynamically control menu visibility
+    onMenuClose={() => setMenuIsOpen(false)} // Update state on close
+    onMenuOpen={() => setMenuIsOpen(true)}  // Update state on open
     />
   );
 };

@@ -1263,6 +1263,57 @@ useEffect(() => {
         <p>Loading bus data...</p>
       </div>
     }>
+      {isIssueBannerVisible && (
+  <div
+  style={{
+    textAlign: 'center',
+    backgroundColor: '#FFEEEE',
+    padding: '4px 8px',
+    marginTop: '4px',
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+    color: 'red',
+    position: 'relative',
+    display: isIssueBannerVisible ? 'flex' : 'none',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transform: `translateY(${isIssueBannerFadingOut ? -20 : 0}px)`,
+    opacity: isIssueBannerFadingOut ? 0 : 1,
+    transition: 'opacity 1s ease-out, transform 1s ease-out',
+  }}
+>
+
+    <p className="issue-text" style={{ margin: '4px 24px' }}>
+      There is a known issue where the MTA Bus Time API occasionally sends stops in the wrong direction, causing the stops list to be incorrect in the popup. Please use this data with caution and reference the 
+      <a 
+        href="https://bustime.mta.info/" 
+        target="_blank" 
+        rel="noopener noreferrer"
+        style={{ color: "red", textDecoration: "underline", marginLeft: "4px" }}
+      >
+        MTA website
+      </a> if needed.
+    </p>
+    <button
+      onClick={() => setIsIssueBannerVisible(false)}
+      style={{
+        position: 'absolute',
+        right: '8px',
+        background: 'none',
+        border: 'none',
+        color: 'red',
+        cursor: 'pointer',
+        fontSize: '18px',
+        padding: '4px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      ×
+    </button>
+  </div>
+)}
 <div style={{ 
   display: "flex", 
   flexDirection: "column",
@@ -1398,57 +1449,6 @@ useEffect(() => {
                       )}
                       <span>(next refresh in <span ref={timerRef}>{timeRemaining}</span>s)</span>
                     </p>
-                    {isIssueBannerVisible && (
-  <div
-  style={{
-    textAlign: 'center',
-    backgroundColor: '#FFEEEE',
-    padding: '4px 8px',
-    marginTop: '4px',
-    overflow: 'hidden',
-    boxSizing: 'border-box',
-    color: 'red',
-    position: 'relative',
-    display: isIssueBannerVisible ? 'flex' : 'none',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transform: `translateY(${isIssueBannerFadingOut ? -20 : 0}px)`,
-    opacity: isIssueBannerFadingOut ? 0 : 1,
-    transition: 'opacity 1s ease-out, transform 1s ease-out',
-  }}
->
-
-    <p className="issue-text" style={{ margin: '4px 24px' }}>
-      There is a known issue where the MTA Bus Time API occasionally sends stops in the wrong direction, causing the stops list to be incorrect in the popup. Please use this data with caution and reference the 
-      <a 
-        href="https://bustime.mta.info/" 
-        target="_blank" 
-        rel="noopener noreferrer"
-        style={{ color: "red", textDecoration: "underline", marginLeft: "4px" }}
-      >
-        MTA website
-      </a> if needed.
-    </p>
-    <button
-      onClick={() => setIsIssueBannerVisible(false)}
-      style={{
-        position: 'absolute',
-        right: '8px',
-        background: 'none',
-        border: 'none',
-        color: 'red',
-        cursor: 'pointer',
-        fontSize: '18px',
-        padding: '4px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      ×
-    </button>
-  </div>
-)}
                   </div>
                 )}
 
