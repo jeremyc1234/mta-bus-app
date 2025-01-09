@@ -48,6 +48,7 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
   console.log("📍 isLocationChanging in LocationDropdown:", isLocationChanging);
   const initializeDefaultRef = useRef(false);
   const onLocationChangeRef = useRef(onLocationChange);
+
 const [addressSuggestions, setAddressSuggestions] = useState<Array<{
     value: { lat: number; lon: number; label: string };
     label: string;
@@ -225,6 +226,7 @@ const [addressSuggestions, setAddressSuggestions] = useState<Array<{
       }, 1000);
     }
   };
+
 
   useEffect(() => {
     if (selectedValue) {
