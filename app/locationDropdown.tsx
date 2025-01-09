@@ -37,8 +37,11 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [selectedValue, setSelectedValue] = useState<LocationSelectOption | null>(() => {
-    const savedLocation = localStorage.getItem('selectedLocation');
-    return savedLocation ? JSON.parse(savedLocation) : null;
+    if (typeof window !== 'undefined') {
+      const savedLocation = localStorage.getItem('selectedLocation');
+      return savedLocation ? JSON.parse(savedLocation) : null;
+    }
+    return null;
   });
   const [isAddressMode, setIsAddressMode] = useState(false);
   const { setLocation } = useLocation();
@@ -345,14 +348,16 @@ const [addressSuggestions, setAddressSuggestions] = useState<Array<{
       value={selectedValue}
       placeholder="Search location or address..."
       noOptionsMessage={() => null} // This will always show options
-      onFocus={() => {
-        // Only clear input if it's not the default Union Square location
-        if (selectedValue?.label !== BUS_STOP_LOCATIONS[0].label) {
-          setInputValue('');
+      filterOption={(option: any, input: string) => {
+        // Check if it's a group of options
+        if (option.options) {
+          return input && input.length > 3; // Only show custom addresses group when typing
         }
-      }}
-      filterOption={(option, input) => {
-        if (!input) return true; // Show all options when no input
+        
+        // For individual options
+        if (!input || input.length <= 3) {
+          return !option.data?.isCustomAddress; // Only show preset locations
+        }
         return option.label.toLowerCase().includes(input.toLowerCase());
       }}
       className="location-dropdown"

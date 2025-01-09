@@ -195,6 +195,7 @@ const timerRef = useRef<HTMLSpanElement>(null);
     }
   }, [location.lat, location.lon]);
   const fallbackLocation = () => {
+    console.log("🔍 Checking for saved location in fallbackLocation...");
     const savedLat = localStorage.getItem("savedLat");
     const savedLon = localStorage.getItem("savedLon");
   
@@ -202,15 +203,19 @@ const timerRef = useRef<HTMLSpanElement>(null);
       const latNum = parseFloat(savedLat);
       const lonNum = parseFloat(savedLon);
       if (!isNaN(latNum) && !isNaN(lonNum)) {
-        // Set both location context and locationServicesEnabled in one go
+        console.log("✅ Using saved location:", { lat: latNum, lon: lonNum });
         setLocation({ lat: latNum, lon: lonNum });
-        setLocationServicesEnabled(true);
-        return; // Exit early if we have valid saved coordinates
+        setLocationServicesEnabled(false);
+        return true;
       }
+      console.log("❌ Saved coordinates are invalid:", { savedLat, savedLon });
+    } else {
+      console.log("❌ No saved location found in localStorage");
     }
     
-    // Only fall back to Union Square if no valid saved location
+    console.log("⚠️ Falling back to Union Square in fallbackLocation");
     setDefaultLocation();
+    return false;
   };
   const checkScrollable = () => {
     const el = scrollContainerRef.current;
@@ -238,33 +243,54 @@ const timerRef = useRef<HTMLSpanElement>(null);
     let geolocationAttempted = false;
     let watchId: number | null = null;
   
-    // First handle any saved location immediately
-    fallbackLocation();
+    console.log("🚀 Starting location initialization...");
+    const usedSavedLocation = fallbackLocation();
+    console.log("📍 Used saved location?", usedSavedLocation);
   
     const handlePositionUpdate = (pos: GeolocationPosition) => {
       const { latitude, longitude } = pos.coords;
+      console.log("📱 Got geolocation update:", { latitude, longitude });
       setLocationServicesEnabled(true);
       
       if (isWithinNYC(latitude, longitude)) {
+        console.log("✅ Location is within NYC, using current position");
         setLocation({ lat: latitude, lon: longitude });
         setIsOutsideNYC(false);
         localStorage.setItem("savedLat", String(latitude));
         localStorage.setItem("savedLon", String(longitude));
       } else {
+        console.log("🌎 Location is outside NYC, checking saved location...");
+        const savedLat = localStorage.getItem("savedLat");
+        const savedLon = localStorage.getItem("savedLon");
+        if (savedLat && savedLon) {
+          const latNum = parseFloat(savedLat);
+          const lonNum = parseFloat(savedLon);
+          if (!isNaN(latNum) && !isNaN(lonNum) && isWithinNYC(latNum, lonNum)) {
+            console.log("✅ Found valid saved NYC location, using it instead:", { latNum, lonNum });
+            setLocation({ lat: latNum, lon: lonNum });
+            setIsOutsideNYC(true);
+            return;
+          }
+          console.log("❌ Saved location invalid or outside NYC:", { latNum, lonNum });
+        }
+        console.log("⚠️ Handling outside NYC case");
         handleOutsideNYC(latitude, longitude);
       }
     };
   
     if ("geolocation" in navigator) {
+      console.log("📱 Geolocation is available");
       geolocationAttempted = true;
       
-      // Get initial position
       navigator.geolocation.getCurrentPosition(
         handlePositionUpdate,
         (error) => {
-          console.log('Geolocation error:', error);
+          console.log('❌ Geolocation error:', error);
           setLocationServicesEnabled(false);
-          // Don't call fallbackLocation here since we already did it above
+          if (!usedSavedLocation) {
+            console.log("⚠️ No saved location and geolocation failed, falling back to Union Square");
+            setDefaultLocation();
+          }
         },
         {
           maximumAge: 30000,
@@ -273,11 +299,10 @@ const timerRef = useRef<HTMLSpanElement>(null);
         }
       );
       
-      // Watch for position updates
       watchId = navigator.geolocation.watchPosition(
         handlePositionUpdate,
         (error) => {
-          console.log('Geolocation watch error:', error);
+          console.log('❌ Geolocation watch error:', error);
           setLocationServicesEnabled(false);
         },
         {
@@ -286,9 +311,15 @@ const timerRef = useRef<HTMLSpanElement>(null);
           enableHighAccuracy: false,
         }
       );
+    } else {
+      console.log("📱 Geolocation is not available");
     }
   
-    // Cleanup function
+    if (!geolocationAttempted && !usedSavedLocation) {
+      console.log("⚠️ No geolocation attempt and no saved location, using Union Square");
+      setDefaultLocation();
+    }
+  
     return () => {
       if (watchId !== null) {
         navigator.geolocation.clearWatch(watchId);
@@ -901,13 +932,13 @@ useEffect(() => {
       // Start fade-out animation at 28 seconds
       const fadeTimer = setTimeout(() => {
         setIsIssueBannerFadingOut(true);
-      }, 28000);
+      }, 18000);
   
       // Fully hide the banner at 30 seconds
       const hideTimer = setTimeout(() => {
         setIsIssueBannerVisible(false);
         setIsIssueBannerFadingOut(false); // Reset fade-out state
-      }, 30000);
+      }, 20000);
   
       return () => {
         clearTimeout(fadeTimer);
@@ -1883,16 +1914,18 @@ useEffect(() => {
                                                     }
                                                 }}
 
-                                                  style={{
-                                                    margin: "8px 0",
-                                                    backgroundColor: "white",
-                                                    borderRadius: "8px",
-                                                    boxShadow: "0 4px 8px rgba(0, 0, 0, 0.15)",
-                                                    padding: "12px",
-                                                    textAlign: "center",
-                                                    cursor: "pointer",
-                                                    transition: "transform 0.2s",
-                                                  }}
+                                                style={{
+                                                  margin: "8px 0",
+                                                  background: "linear-gradient(145deg, #ffffff 50%, #f0f0f0 100%)", // Subtle gradient from white to light gray
+                                                  borderRadius: "8px",
+                                                  boxShadow: "inset 0 2px 4px rgba(255, 255, 255, 100), 0 2px 8px rgba(0, 0, 0, 0.15)", // Combines inner highlight and outer shadow
+                                                  padding: "12px",
+                                                  textAlign: "center",
+                                                  cursor: "pointer",
+                                                  transition: "transform 0.2s, box-shadow 0.2s",
+                                                  position: "relative", // For the pseudo-element
+                                                  overflow: "hidden", // To contain the pseudo-element
+                                                }}
                                                 >
                                                   <div style={{
                                                     fontWeight: "bold",
