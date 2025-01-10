@@ -107,6 +107,11 @@ const [addressSuggestions, setAddressSuggestions] = useState<Array<{
     initializeDefaultRef.current = true;
   }, [setLocation]);
 
+  const isTouchDevice = () => {
+    return (('ontouchstart' in window) ||
+            (navigator.maxTouchPoints > 0));
+  };
+
   useEffect(() => {
     onLocationChangeRef.current = onLocationChange;
   }, [onLocationChange]);
@@ -203,6 +208,7 @@ const [addressSuggestions, setAddressSuggestions] = useState<Array<{
 
   const ClearIndicator = (props: any) => {
   const { innerRef, innerProps } = props;
+
   return (
     <div
       {...innerProps}
@@ -382,6 +388,13 @@ const handleSelectChange = async (selectedOption: LocationSelectOption | null) =
     }
   };  
 
+  const handleFocus = () => {
+    if (isTouchDevice()) {
+      handleInputChange("", { action: "clear" });
+    }
+    setMenuIsOpen(true); // Always open the menu on focus
+  };
+
   return (
     <Select
       components={{ ClearIndicator }}
@@ -392,6 +405,7 @@ const handleSelectChange = async (selectedOption: LocationSelectOption | null) =
       onInputChange={handleInputChange}
       onKeyDown={handleKeyDown}
       isLoading={isLoading}
+      onFocus={handleFocus}
       value={selectedValue}
       isClearable
       placeholder="Search location or address..."

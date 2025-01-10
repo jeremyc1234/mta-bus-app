@@ -1555,7 +1555,7 @@ const HomeContent = () => {
                       <>
                         {isScrollableLeft && (
                           <Image
-                            src="/public/icons/left_caret.png"
+                            src="/icons/left_caret.png"
                             alt="Scroll Left"
                             style={{
                               position: 'absolute',
@@ -1577,7 +1577,7 @@ const HomeContent = () => {
                         )}
                         {isScrollableRight && (
                           <Image
-                            src="/public/icons/right_caret.png"
+                            src="/icons/right_caret.png"
                             alt="Scroll Right"
                             style={{
                               position: 'absolute',
