@@ -9,8 +9,6 @@ import NavigationButtons from './navigationButtons';
 import { BUS_STOP_LOCATIONS } from "./data/busstops";
 import { useLocation } from "./locationContext";
 import ScrollableTile from "./scrollableTile";
-import Header from "./header";
-import RouteMapPopup from "./routeMapPopup";
 
 const inter = Inter({ subsets: ['latin'] });
 
