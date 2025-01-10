@@ -1,6 +1,3 @@
-[build]
-  command = "rm -rf /opt/build/cache && npm run build"
-
 [[headers]]
   for = "/*"
   [headers.values]
