@@ -108,7 +108,8 @@ const HomeContent = () => {
   const [isInvalidAddress, setIsInvalidAddress] = useState<boolean>(false);
 
   const [isChangingLocation, setIsChangingLocation] = useState(false);
-
+  const lastFetchTimeRef = useRef<number>(0);
+  const FETCH_THROTTLE_MS = 1000;
   const [serviceAlert, setServiceAlert] = useState<ServiceAlert | null>(null);
   const [isAlertPopupOpen, setIsAlertPopupOpen] = useState(false);
   const { location, setLocation } = useLocation();
@@ -243,16 +244,17 @@ const HomeContent = () => {
   useEffect(() => {
     let geolocationAttempted = false;
     let watchId: number | null = null;
-
+    let hasCheckedSavedLocation = false; // Add this flag
+  
     console.log("🚀 Starting location initialization...");
     const usedSavedLocation = fallbackLocation();
     console.log("📍 Used saved location?", usedSavedLocation);
-
+  
     const handlePositionUpdate = (pos: GeolocationPosition) => {
       const { latitude, longitude } = pos.coords;
       console.log("📱 Got geolocation update:", { latitude, longitude });
       setLocationServicesEnabled(true);
-
+  
       if (isWithinNYC(latitude, longitude)) {
         console.log("✅ Location is within NYC, using current position");
         setLocation({ lat: latitude, lon: longitude });
@@ -261,28 +263,34 @@ const HomeContent = () => {
         localStorage.setItem("savedLon", String(longitude));
       } else {
         console.log("🌎 Location is outside NYC, checking saved location...");
-        const savedLat = localStorage.getItem("savedLat");
-        const savedLon = localStorage.getItem("savedLon");
-        if (savedLat && savedLon) {
-          const latNum = parseFloat(savedLat);
-          const lonNum = parseFloat(savedLon);
-          if (!isNaN(latNum) && !isNaN(lonNum) && isWithinNYC(latNum, lonNum)) {
-            console.log("✅ Found valid saved NYC location, using it instead:", { latNum, lonNum });
-            setLocation({ lat: latNum, lon: lonNum });
-            setIsOutsideNYC(true);
-            return;
+        
+        // Only check saved location if we haven't done so yet
+        if (!hasCheckedSavedLocation) {
+          hasCheckedSavedLocation = true;
+          const savedLat = localStorage.getItem("savedLat");
+          const savedLon = localStorage.getItem("savedLon");
+          
+          if (savedLat && savedLon) {
+            const latNum = parseFloat(savedLat);
+            const lonNum = parseFloat(savedLon);
+            if (!isNaN(latNum) && !isNaN(lonNum) && isWithinNYC(latNum, lonNum)) {
+              console.log("✅ Found valid saved NYC location, using it instead:", { latNum, lonNum });
+              setLocation({ lat: latNum, lon: lonNum });
+              setIsOutsideNYC(true);
+              return;
+            }
+            console.log("❌ Saved location invalid or outside NYC:", { latNum, lonNum });
           }
-          console.log("❌ Saved location invalid or outside NYC:", { latNum, lonNum });
+          console.log("⚠️ Handling outside NYC case");
+          handleOutsideNYC(latitude, longitude);
         }
-        console.log("⚠️ Handling outside NYC case");
-        handleOutsideNYC(latitude, longitude);
       }
     };
-
+  
     if ("geolocation" in navigator) {
       console.log("📱 Geolocation is available");
       geolocationAttempted = true;
-
+  
       navigator.geolocation.getCurrentPosition(
         handlePositionUpdate,
         (error) => {
@@ -299,9 +307,14 @@ const HomeContent = () => {
           enableHighAccuracy: false,
         }
       );
-
+  
       watchId = navigator.geolocation.watchPosition(
-        handlePositionUpdate,
+        (pos) => {
+          // Only update if we're in NYC, otherwise ignore updates
+          if (isWithinNYC(pos.coords.latitude, pos.coords.longitude)) {
+            handlePositionUpdate(pos);
+          }
+        },
         (error) => {
           console.log('❌ Geolocation watch error:', error);
           setLocationServicesEnabled(false);
@@ -315,19 +328,19 @@ const HomeContent = () => {
     } else {
       console.log("📱 Geolocation is not available");
     }
-
+  
     if (!geolocationAttempted && !usedSavedLocation) {
       console.log("⚠️ No geolocation attempt and no saved location, using Union Square");
       setDefaultLocation();
     }
-
+  
     return () => {
       if (watchId !== null) {
         navigator.geolocation.clearWatch(watchId);
       }
     };
   }, []);
-
+  
   useEffect(() => {
     if (selectedStop) {
       // If it's coordinates (from geolocation)
@@ -426,7 +439,7 @@ const HomeContent = () => {
       setUserLocation(locationName);
     }
 
-    // Only revert if we have no saved location
+    // Only revert if we have no saved geo
     const savedLat = localStorage.getItem("savedLat");
     const savedLon = localStorage.getItem("savedLon");
     const hasSavedLocation = savedLat && savedLon;
@@ -441,84 +454,144 @@ const HomeContent = () => {
     setLocationServicesEnabled(false);
     setDefaultLocation();
   };
-
-useEffect(() => {
-  let isActive = true;
-  const controller = new AbortController();
-
-  const fetchData = async () => {
-    if (!location.lat || !location.lon) {
-      console.log('⚠️ No location data available, skipping fetch');
-      return;
-    }
-
-    // Set loading state
-    setLoadingState(prev => ({
-      ...prev,
-      isLoading: !isRefreshing
-    }));
-
-    try {
-      // Clear existing data before fetching new data
-      if (isActive) setData(null);
-
-      console.log('📡 Fetching bus data for location:', { lat: location.lat, lon: location.lon });
-      
-      const response = await fetch(
-        `/api/busdata?lat=${location.lat}&lon=${location.lon}`,
-        { signal: controller.signal }
-      );
-      
-      if (!response.ok) {
-        throw new Error(`Server responded with ${response.status}`);
-      }
-
-      const json = await response.json();
-      
-      // Only update state if component is still mounted
-      if (isActive) {
-        setData(json);
-        setError(null);
-        
-        const now = new Date();
-        const formattedTime = now.toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: true
-        });
-        setLastUpdatedTime(formattedTime);
-      }
-    } catch (error) {
-      if (error === 'AbortError') {
-        console.log('Fetch aborted');
+  const lastFetchRef = useRef<{ lat: number; lon: number } | null>(null);
+  const debouncedLocation = useMemo(() => {
+    return {
+      lat: Number(location.lat.toFixed(6)),
+      lon: Number(location.lon.toFixed(6))
+    };
+  }, [location.lat, location.lon]);
+  useEffect(() => {
+    let isActive = true;
+    const controller = new AbortController();
+  
+    const fetchData = async () => {
+      const now = Date.now();
+      if (now - lastFetchTimeRef.current < FETCH_THROTTLE_MS) {
+        console.log('🛑 Throttling fetch request');
         return;
       }
-      console.error('❌ Fetch error:', error);
-      if (isActive) {
-        setError('Failed to load bus data');
+      
+      // Normalize coordinates
+      const normalizedLocation = {
+        lat: Number(location.lat.toFixed(6)),
+        lon: Number(location.lon.toFixed(6))
+      };
+    
+      // Check if we've already fetched this exact location
+      if (lastFetchRef.current?.lat === normalizedLocation.lat && 
+          lastFetchRef.current?.lon === normalizedLocation.lon) {
+        console.log('🔄 Skipping duplicate fetch:', {
+          current: lastFetchRef.current,
+          requested: normalizedLocation
+        });
+        return;
       }
-    } finally {
-      if (isActive) {
-        setLoadingState(prev => ({
-          ...prev,
-          isLoading: false,
-          isRefreshing: false
-        }));
+    
+      console.log('🚀 Starting new fetch:', {
+        previous: lastFetchRef.current,
+        new: normalizedLocation,
+        timestamp: now
+      });
+    
+      lastFetchTimeRef.current = now;
+      lastFetchRef.current = normalizedLocation;
+    
+
+      if (!location.lat || !location.lon) {
+        console.log('⚠️ No location data available, skipping fetch');
+        return;
       }
-    }
-  };
-
-  // Debounce the fetch to prevent rapid consecutive calls
-  const timeoutId = setTimeout(() => {
-    fetchData();
-  }, 100);
-
-  return () => {
-    isActive = false;
-    controller.abort();
-    clearTimeout(timeoutId);
-  };
-}, [location.lat, location.lon, isRefreshing]);
+  
+      // Clear any pending timeout
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+  
+      // Set loading state
+      setLoadingState(prev => ({
+        ...prev,
+        isLoading: !isRefreshing
+      }));
+  
+      try {
+        // Clear existing data before fetching new data
+        if (isActive) setData(null);
+  
+        console.log('📡 Fetching bus data for location:', { lat: location.lat, lon: location.lon });
+        
+        const response = await fetch(
+          `/api/busdata?lat=${location.lat}&lon=${location.lon}`,
+          { 
+            signal: controller.signal,
+            // Add cache control headers
+            headers: {
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache'
+            }
+          }
+        );
+        
+        if (!response.ok) {
+          throw new Error(`Server responded with ${response.status}`);
+        }
+  
+        const json = await response.json();
+        
+        // Only update state if component is still mounted
+        if (isActive) {
+          setData(json);
+          setError(null);
+          
+          const now = new Date();
+          const formattedTime = now.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true
+          });
+          setLastUpdatedTime(formattedTime);
+        }
+      } catch (err: any) {
+        // Only log aborted requests in development
+        if (err.name === 'AbortError') {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Fetch aborted due to new request');
+          }
+          return;
+        }
+        console.error('❌ Fetch error:', err);
+        if (isActive) {
+          setError('Failed to load bus data');
+        }
+      } finally {
+        if (isActive) {
+          setLoadingState(prev => ({
+            ...prev,
+            isLoading: false,
+            isRefreshing: false
+          }));
+        }
+      }
+    };
+  
+    // Use a smaller debounce in development
+    const debounceTime = process.env.NODE_ENV === 'development' ? 50 : 100;
+    
+    const timeoutId = setTimeout(() => {
+      if (isActive) {
+        fetchData();
+      }
+    }, debounceTime);
+  
+    return () => {
+      isActive = false;
+      // Only abort if we're not in development
+      if (process.env.NODE_ENV !== 'development') {
+        controller.abort();
+      }
+      clearTimeout(timeoutId);
+    };
+  }, [debouncedLocation.lat, debouncedLocation.lon, isRefreshing]);
 
   useEffect(() => {
     setIsMobile(window.matchMedia("(pointer: coarse)").matches);
@@ -690,7 +763,7 @@ useEffect(() => {
     // Store the highlighted stop in a ref to avoid recreating the scroll handler
     const highlightedStopRef = useRef(highlightedStop);
     highlightedStopRef.current = highlightedStop;
-
+    
     // Create a stable scroll handler that uses the ref
     const handleScroll = useCallback((event: Event) => {
       const scrollEl = event.target as HTMLDivElement;
@@ -1938,15 +2011,15 @@ useEffect(() => {
                                                       width: "20px",
                                                       height: "20px"
                                                     }}>
-                                                      <img
-                                                        src="/icons/info.svg"
-                                                        alt="Info"
-                                                        style={{
-                                                          width: "100%",
-                                                          height: "100%",
-                                                          opacity: 0.6,
-                                                          transition: "opacity 0.2s"
-                                                        }}
+                                                      <Image
+                                                          src="/icons/info.svg"
+                                                          alt="Info"
+                                                          width={20}
+                                                          height={20}
+                                                          style={{
+                                                            opacity: 0.6,
+                                                            transition: "opacity 0.2s"
+                                                          }}
                                                         onMouseEnter={(e) => {
                                                           e.currentTarget.style.opacity = "1";
                                                         }}

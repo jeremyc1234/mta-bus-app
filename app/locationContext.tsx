@@ -46,11 +46,35 @@ export function LocationProvider({ children }: { children: ReactNode }) {
   const [locationServicesEnabled, setLocationServicesEnabled] = useState(false);
   const [isOutsideNYC, setIsOutsideNYC] = useState(false);
 
+  const normalizeCoordinate = (coord: number): number => {
+    return Number(coord.toFixed(6));
+  };
+  
   const setLocationWithStorage = useCallback((newLocation: Location) => {
-    setLocation(newLocation);
-    localStorage.setItem("savedLat", newLocation.lat.toString());
-    localStorage.setItem("savedLon", newLocation.lon.toString());
-  }, []);
+    const normalizedLocation = {
+      lat: normalizeCoordinate(newLocation.lat),
+      lon: normalizeCoordinate(newLocation.lon)
+    };
+    
+    // Add debug logging
+    console.log('🔍 Location update requested:', {
+      current: { lat: location.lat, lon: location.lon },
+      new: newLocation,
+      normalized: normalizedLocation,
+      stack: new Error().stack
+    });
+    
+    // Only update if coordinates are actually different
+    if (normalizedLocation.lat !== location.lat || normalizedLocation.lon !== location.lon) {
+      setLocation(normalizedLocation);
+      localStorage.setItem("savedLat", normalizedLocation.lat.toString());
+      localStorage.setItem("savedLon", normalizedLocation.lon.toString());
+    } else {
+      console.log('📍 Skipping duplicate location update');
+    }
+  }, [location.lat, location.lon]);
+  
+  
   
   return (
     <LocationContext.Provider value={{ 

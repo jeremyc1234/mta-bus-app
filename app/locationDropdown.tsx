@@ -49,6 +49,8 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
   const initializeDefaultRef = useRef(false);
   const onLocationChangeRef = useRef(onLocationChange);
   const [menuIsOpen, setMenuIsOpen] = useState(false);
+  const lastUpdateRef = useRef<number>(0);
+const THROTTLE_MS = 1000; // Minimum time between updates
 const [addressSuggestions, setAddressSuggestions] = useState<Array<{
     value: { lat: number; lon: number; label: string };
     label: string;
@@ -220,42 +222,55 @@ const [addressSuggestions, setAddressSuggestions] = useState<Array<{
 };
   
 
-  const handleSelectChange = async (selectedOption: LocationSelectOption | null) => {
-    // if (!selectedOption) {
-    //   // Clear the input and keep the dropdown open
-    //   setInputValue('');
-    //   return;
-    // }
-    if (selectedOption) {
-      // Update all states in one batch
-      await Promise.all([
-        setSelectedValue(selectedOption),
-        setInputValue(selectedOption.label),
-        setLocation({
-          lat: selectedOption.value.lat,
-          lon: selectedOption.value.lon
-        })
-      ]);
-  
-      // Store in localStorage after state updates
-      localStorage.setItem('dropdownInputValue', selectedOption.label);
-      localStorage.setItem('selectedLocation', JSON.stringify(selectedOption));
-      
-      // Trigger location change callback after all updates are complete
-      onLocationChangeRef.current({
-        lat: selectedOption.value.lat,
-        lon: selectedOption.value.lon
-      });
-      
-      // Signal that location is changing
-      setIsLocationChanging(true);
-      
-      // Reset location changing flag after a short delay
-      setTimeout(() => {
-        setIsLocationChanging(false);
-      }, 1000);
+const handleSelectChange = async (selectedOption: LocationSelectOption | null) => {
+  if (selectedOption) {
+    const now = Date.now();
+    // Throttle updates
+    if (now - lastUpdateRef.current < THROTTLE_MS) {
+      console.log('🛑 Throttling location update');
+      return;
     }
-  };
+    lastUpdateRef.current = now;
+
+    // Normalize coordinates
+    const normalizedLat = Number(selectedOption.value.lat.toFixed(6));
+    const normalizedLon = Number(selectedOption.value.lon.toFixed(6));
+    
+    const normalizedLocation = {
+      lat: normalizedLat,
+      lon: normalizedLon
+    };
+
+    console.log('🎯 LocationDropdown selection (throttled):', {
+      normalized: normalizedLocation,
+      timestamp: now
+    });
+
+    // Batch all state updates together
+    setSelectedValue({
+      ...selectedOption,
+      value: { ...selectedOption.value, ...normalizedLocation }
+    });
+    setInputValue(selectedOption.label);
+    setLocation(normalizedLocation);
+    
+    // Store in localStorage
+    const storageValue = JSON.stringify({
+      ...selectedOption,
+      value: { ...selectedOption.value, ...normalizedLocation }
+    });
+    localStorage.setItem('dropdownInputValue', selectedOption.label);
+    localStorage.setItem('selectedLocation', storageValue);
+    
+    // Signal location change
+    onLocationChangeRef.current(normalizedLocation);
+    setIsLocationChanging(true);
+    
+    setTimeout(() => {
+      setIsLocationChanging(false);
+    }, 1000);
+  }
+};
 
   useEffect(() => {
     if (selectedValue) {
