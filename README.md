@@ -16,18 +16,12 @@ A **Next.js** application that displays real-time bus arrivals near a specific l
    - **Mobile**: “Tiles” snap horizontally (carousel style).  
    - **Desktop**: You can freely scroll horizontally.  
 
-4. **Occupancy Display**  
-   - If the MTA feed provides a `MonitoredVehicleJourney.Occupancy` field, the app shows a short occupancy label (e.g., *“Standing Room Only”*).
-
-5. **Customized UI**  
+4. **Customized UI**  
    - Grey tiles filling the viewport height (`100vh`).  
    - Automatic refresh every 30 seconds with a countdown.  
    - Renders up to **5** closest stops, sorted by distance.  
    - If a bus is “0 stops away,” it shows “<1 Stop Away.”  
    - Some simple text like “Other bus routes will appear here if available” if only one route is found.  
-
-6. **Dynamic Light/Dark Mode**  
-   - “Updated” and “Created by Jeremy” text adapt to the user’s system theme.  
 
 ## Requirements
 
