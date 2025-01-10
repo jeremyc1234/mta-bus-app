@@ -50,7 +50,7 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
   const onLocationChangeRef = useRef(onLocationChange);
   const [menuIsOpen, setMenuIsOpen] = useState(false);
   const lastUpdateRef = useRef<number>(0);
-const THROTTLE_MS = 100; // Minimum time between updates
+const THROTTLE_MS = 1000; // Minimum time between updates
 const [addressSuggestions, setAddressSuggestions] = useState<Array<{
     value: { lat: number; lon: number; label: string };
     label: string;

@@ -108,7 +108,7 @@ const HomeContent = () => {
 
   const [isChangingLocation, setIsChangingLocation] = useState(false);
   const lastFetchTimeRef = useRef<number>(0);
-  const FETCH_THROTTLE_MS = 100;
+  const FETCH_THROTTLE_MS = 1000;
   const [serviceAlert, setServiceAlert] = useState<ServiceAlert | null>(null);
   const [isAlertPopupOpen, setIsAlertPopupOpen] = useState(false);
   const { location, setLocation } = useLocation();
@@ -1185,7 +1185,7 @@ const HomeContent = () => {
       latitude: location.lat,
       longitude: location.lon,
   });
-  
+
     const ticker = setInterval(() => {
       const elapsed = (Date.now() - lastUpdateRef.current) / 1000;
       const remain = refreshInterval / 1000 - elapsed;
