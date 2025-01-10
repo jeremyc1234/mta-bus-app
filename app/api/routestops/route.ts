@@ -1,3 +1,4 @@
+// route.ts
 import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
@@ -12,7 +13,7 @@ interface StopGroup {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const routeId = searchParams.get('routeId');
+    let routeId = searchParams.get('routeId');
     const tileStopName = searchParams.get('tileStopName') || 'None';
     const destination = searchParams.get('destination') || '';
 
@@ -36,16 +37,23 @@ export async function GET(request: Request) {
       );
     }
 
-    const encodedRouteId = encodeURIComponent(routeId);
+    // Clean the routeId
+    routeId = routeId.replace(/^(MTA NYCT_|MTABC_)/, '');
+    
+    // Determine the correct route prefix
     let routePrefix = 'MTA NYCT';
-
     if (/^(BM|QM|BXM)/.test(routeId.toUpperCase())) {
       routePrefix = 'MTABC';
     } else if (/^X\d+/.test(routeId.toUpperCase())) {
       routePrefix = 'MTA NYCT';
+    } else if (/^Q\d+/.test(routeId.toUpperCase())) {
+      // Q buses are MTA NYCT unless they're QM (which is handled above)
+      routePrefix = 'MTA NYCT';
     }
 
-    const apiUrl = `http://bustime.mta.info/api/where/stops-for-route/${routePrefix}_${encodedRouteId}.json?key=${MTA_API_KEY}&includePolylines=false`;
+    const apiUrl = `http://bustime.mta.info/api/where/stops-for-route/${routePrefix}_${routeId}.json?key=${MTA_API_KEY}&includePolylines=false`;
+    
+    console.log('🔗 [API URL]', apiUrl);
 
     const response = await fetch(apiUrl, {
       headers: {
@@ -91,45 +99,39 @@ export async function GET(request: Request) {
         .filter((stop: string) => typeof stop === 'string');
     });
 
-    console.log('🛠️ [STOPS BY DIRECTION] Processed Stops:', stopsByDirection);
-
-    // Find matching direction based on destination and stop patterns
-    
+    // Find matching direction based on destination
     let matchedDirection = null;
-
-if (destination) {
-  // Strip out "via" parts and clean the destination
-  const destParts = destination.toLowerCase().split(' via ');
-  const cleanDestination = destParts[0].trim();
-
-  // Look at each direction's stops
-  matchedDirection = Object.entries(stopsByDirection).find(([dirId, stops]) => {
-    // Clean and normalize the last stop name
-    const lastStop = stops[stops.length - 1].toLowerCase().split('/')[0].trim();
-    const firstStop = stops[0].toLowerCase().split('/')[0].trim();
     
-    // Check if destination matches either the first or last stop of this direction
-    return cleanDestination.includes(lastStop) || 
-           cleanDestination.includes(firstStop) ||
-           lastStop.includes(cleanDestination) ||
-           firstStop.includes(cleanDestination);
-  })?.[0];
+    if (destination) {
+      // Strip out "via" parts and clean the destination
+      const destParts = destination.toLowerCase().split(' via ');
+      const cleanDestination = destParts[0].trim();
 
-  // If no match found by destination, use provided direction param
-  const directionParam = searchParams.get('direction');
-  if (!matchedDirection && directionParam) {
-    matchedDirection = directionParam;
-  }
-}
+      // Look at each direction's stops
+      matchedDirection = Object.entries(stopsByDirection).find(([dirId, stops]) => {
+        // Clean and normalize the last stop name
+        const lastStop = stops[stops.length - 1].toLowerCase().split('/')[0].trim();
+        const firstStop = stops[0].toLowerCase().split('/')[0].trim();
+        
+        return cleanDestination.includes(lastStop) || 
+               cleanDestination.includes(firstStop) ||
+               lastStop.includes(cleanDestination) ||
+               firstStop.includes(cleanDestination);
+      })?.[0];
 
-// If still no match found, fall back to stop matching
-if (!matchedDirection) {
-  matchedDirection = Object.entries(stopsByDirection).find(([_dir, stops]) =>
-    stops.includes(tileStopName)
-  )?.[0];
-}
+      // If no match found by destination, use provided direction param
+      const directionParam = searchParams.get('direction');
+      if (!matchedDirection && directionParam) {
+        matchedDirection = directionParam;
+      }
+    }
 
-    console.log('🧭 [DIRECTION MATCH] Matched Direction:', matchedDirection);
+    // If still no match found, fall back to stop matching
+    if (!matchedDirection) {
+      matchedDirection = Object.entries(stopsByDirection).find(([_dir, stops]) =>
+        stops.some(stop => stop.includes(tileStopName))
+      )?.[0];
+    }
 
     const stopsForMatchedDirection = matchedDirection
       ? stopsByDirection[matchedDirection] || []
@@ -137,8 +139,6 @@ if (!matchedDirection) {
 
     // Get the direction name for reference
     const directionName = directions.find(dir => dir.id === matchedDirection)?.name || 'Unknown';
-
-    console.log('✅ [FINAL RESPONSE] Stops for Matched Direction:', stopsForMatchedDirection);
 
     return NextResponse.json({
       stops: stopsForMatchedDirection,

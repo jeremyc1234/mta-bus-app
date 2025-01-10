@@ -109,7 +109,7 @@ const HomeContent = () => {
 
   const [isChangingLocation, setIsChangingLocation] = useState(false);
   const lastFetchTimeRef = useRef<number>(0);
-  const FETCH_THROTTLE_MS = 1000;
+  const FETCH_THROTTLE_MS = 100;
   const [serviceAlert, setServiceAlert] = useState<ServiceAlert | null>(null);
   const [isAlertPopupOpen, setIsAlertPopupOpen] = useState(false);
   const { location, setLocation } = useLocation();

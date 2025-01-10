@@ -9,33 +9,37 @@ import Image from "next/image";
 
 const TABLET_BREAKPOINT = 768;
 
-
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [windowWidth, setWindowWidth] = useState(0);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 0);
   const [selectedStop, setSelectedStop] = useState<string | null>(null);
   const pathname = usePathname();
   const [isLocationChanging, setIsLocationChanging] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Handle client-side mounting
+  useEffect(() => {
+    setMounted(true);
+    setWindowWidth(window.innerWidth);
+    return () => setMounted(false);
+  }, []);
 
   const handleLocationChange = async (newLocation: { lat: number | null; lon: number | null }) => {
     if (newLocation.lat && newLocation.lon) {
-      // console.log("🚀 handleLocationChange triggered in Header");
       setIsLocationChanging(true);
-      // console.log("⏳ isLocationChanging set to TRUE in Header");
 
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       try {
-        // console.log("📌 Setting new location:", newLocation);
         setSelectedStop(`${newLocation.lat}, ${newLocation.lon}`);
       } catch (error) {
-        console.error("❌ Error during location change:", error);
+        console.error("Error during location change:", error);
       }
     }
   };
 
   useEffect(() => {
-    setWindowWidth(window.innerWidth);
+    if (typeof window === 'undefined') return;
 
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
@@ -49,6 +53,8 @@ export default function Header() {
   }, []);
 
   useEffect(() => {
+    if (typeof document === 'undefined') return;
+
     const style = document.createElement("style");
     style.textContent = `
       @keyframes slideIn {
@@ -62,14 +68,23 @@ export default function Header() {
     `;
     document.head.appendChild(style);
     return () => {
-      document.head.removeChild(style);
+      if (style.parentNode) {
+        document.head.removeChild(style);
+      }
     };
   }, []);
 
   const handleHomeClick = () => {
-    sessionStorage.setItem("visitedFromHeader", "true");
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem("visitedFromHeader", "true");
+    }
     return false;
   };
+
+  // Prevent hydration mismatch
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <Suspense fallback={<div>Loading Header...</div>}>

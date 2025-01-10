@@ -50,7 +50,7 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
   const onLocationChangeRef = useRef(onLocationChange);
   const [menuIsOpen, setMenuIsOpen] = useState(false);
   const lastUpdateRef = useRef<number>(0);
-const THROTTLE_MS = 1000; // Minimum time between updates
+const THROTTLE_MS = 100; // Minimum time between updates
 const [addressSuggestions, setAddressSuggestions] = useState<Array<{
     value: { lat: number; lon: number; label: string };
     label: string;
@@ -247,18 +247,12 @@ const handleSelectChange = async (selectedOption: LocationSelectOption | null) =
       lon: normalizedLon
     };
 
-    console.log('🎯 LocationDropdown selection (throttled):', {
-      normalized: normalizedLocation,
-      timestamp: now
-    });
-
-    // Batch all state updates together
+    // Batch all state updates
     setSelectedValue({
       ...selectedOption,
       value: { ...selectedOption.value, ...normalizedLocation }
     });
     setInputValue(selectedOption.label);
-    setLocation(normalizedLocation);
     
     // Store in localStorage
     const storageValue = JSON.stringify({
@@ -268,7 +262,10 @@ const handleSelectChange = async (selectedOption: LocationSelectOption | null) =
     localStorage.setItem('dropdownInputValue', selectedOption.label);
     localStorage.setItem('selectedLocation', storageValue);
     
-    // Signal location change
+    // Set location AFTER all other updates are done
+    setLocation(normalizedLocation);
+    
+    // Signal location change at the end
     onLocationChangeRef.current(normalizedLocation);
     setIsLocationChanging(true);
     

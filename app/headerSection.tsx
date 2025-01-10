@@ -2,8 +2,10 @@ import React, { useEffect, Suspense, useState } from "react";
 import dynamic from "next/dynamic";
 import IssueBanner from "./issueBanner";
 
+// Ensure LocationDropdown is only loaded client-side
 const LocationDropdown = dynamic(() => import("./locationDropdown"), {
     ssr: false,
+    loading: () => <div style={{ width: '300px', height: '38px', backgroundColor: '#f3f4f6', borderRadius: '8px' }}></div>
 });
 
 interface HeaderSectionProps {
@@ -23,8 +25,18 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
 }) => {
     const [isIssueBannerVisible, setIsIssueBannerVisible] = useState(false);
     const [isIssueBannerFadingOut, setIsIssueBannerFadingOut] = useState(false);
+    const [mounted, setMounted] = useState(false);
 
-    // ... useEffects stay the same ...
+    // Handle client-side mounting
+    useEffect(() => {
+        setMounted(true);
+        return () => setMounted(false);
+    }, []);
+
+    // Prevent hydration mismatch by not rendering until mounted
+    if (!mounted) {
+        return null;
+    }
 
     return (
         <>
@@ -105,4 +117,5 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
     );
 };
 
-export default HeaderSection;
+// Memoize the component to prevent unnecessary rerenders
+export default React.memo(HeaderSection);
