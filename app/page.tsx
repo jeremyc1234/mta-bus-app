@@ -1181,6 +1181,11 @@ const HomeContent = () => {
     return () => clearTimeout(timeoutId);
   }, [tempAddress]);
   useEffect(() => {
+    console.log("🔍 Bus tiles displaying data for location:", {
+      latitude: location.lat,
+      longitude: location.lon,
+  });
+  
     const ticker = setInterval(() => {
       const elapsed = (Date.now() - lastUpdateRef.current) / 1000;
       const remain = refreshInterval / 1000 - elapsed;
