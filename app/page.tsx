@@ -1548,57 +1548,6 @@ const HomeContent = () => {
                       </style>
                     </div>
                   )}
-
-                  <div style={{ position: 'relative' }}>
-                    {isMobile && (
-                      <>
-                        {isScrollableLeft && (
-                          <Image
-                            src="/icons/left_caret.png"
-                            alt="Scroll Left"
-                            style={{
-                              position: 'absolute',
-                              top: '50%',
-                              left: '10px',
-                              transform: 'translateY(-50%)',
-                              zIndex: 100,
-                              cursor: 'pointer',
-                              width: '24px',
-                              height: '48px',
-                              filter: 'drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.5))'
-                            }}
-                            onClick={() => {
-                              if (scrollContainerRef.current) {
-                                scrollContainerRef.current.scrollBy({ left: -200, behavior: 'smooth' });
-                              }
-                            }}
-                          />
-                        )}
-                        {isScrollableRight && (
-                          <Image
-                            src="/icons/right_caret.png"
-                            alt="Scroll Right"
-                            style={{
-                              position: 'absolute',
-                              top: '50%',
-                              right: '10px',
-                              transform: 'translateY(-50%)',
-                              zIndex: 100,
-                              cursor: 'pointer',
-                              width: '24px',
-                              height: '48px',
-                              filter: 'drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.5))'
-                            }}
-                            onClick={() => {
-                              if (scrollContainerRef.current) {
-                                scrollContainerRef.current.scrollBy({ left: 200, behavior: 'smooth' });
-                              }
-                            }}
-                          />
-                        )}
-                      </>
-                    )}
-
                     <div
                       ref={scrollContainerRef}
                       style={{
@@ -1651,6 +1600,7 @@ const HomeContent = () => {
                           <ScrollableTile
                             key={stop.stopId}
                             style={{
+                              position: 'relative',
                               scrollSnapAlign: isMobile ? 'center' : 'none',
                               width: isMobile ? 'calc(100vw - 40px)' : '360px',
                               minWidth: isMobile ? 'calc(100vw - 40px)' : '360px',
@@ -1666,18 +1616,24 @@ const HomeContent = () => {
                               flexDirection: 'column',
                             }}
                           >
-                            {/* Navigation Container - Only render if mobile and has arrows */}
-                            {isMobile && (
+{/* Navigation Container - Only render if mobile and has arrows */}
+{isMobile && (
                               <div style={{
                                 display: 'flex',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
-                                height: '36px', // Fixed height for consistency
+                                height: '5px', // Fixed height for consistency
                                 marginBottom: '8px',
                                 padding: '0 4px'
                               }}>
                                 {/* Left Arrow or Spacer */}
-                                <div style={{ width: '30px', height: '30px', display: 'flex', alignItems: 'center' }}>
+                                <div style={{
+    position: 'absolute',
+    top: '50%', // Center vertically
+    left: '10px', // Adjust for desired horizontal spacing
+    transform: 'translateY(-50%)', // Align with vertical midpoint
+    zIndex: 10, // Ensure it's above other elements
+  }}>
                                   {index > 0 && (
                                     <button
                                       onClick={() => {
@@ -1700,10 +1656,25 @@ const HomeContent = () => {
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         width: '100%',
-                                        height: '100%'
+                                        height: '100%',
                                       }}
                                     >
-                                      👈
+                                      <Image
+                                        src="/icons/left_caret.png"
+                                        alt="Previous"
+                                        width={15}
+                                        height={40}
+                                        style={{
+                                          filter: 'drop-shadow(0px 2px 8px rgba(0, 0, 0, 1))',
+                                          transition: 'filter 0.2s ease-in-out'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                          e.currentTarget.style.filter = 'drop-shadow(0px 3px 3px rgba(0, 0, 0, 0.35))';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                          e.currentTarget.style.filter = 'drop-shadow(0px 2px 2px rgba(0, 0, 0, 0.25))';
+                                        }}
+                                      />
                                     </button>
                                   )}
                                 </div>
@@ -1712,7 +1683,13 @@ const HomeContent = () => {
                                 <div style={{ flex: 1 }} />
 
                                 {/* Right Arrow or Spacer */}
-                                <div style={{ width: '30px', height: '30px', display: 'flex', alignItems: 'center' }}>
+                                <div style={{
+    position: 'absolute',
+    top: '50%', // Center vertically
+    right: '10px', // Adjust for desired horizontal spacing
+    transform: 'translateY(-50%)', // Align with vertical midpoint
+    zIndex: 10, // Ensure it's above other elements
+  }}>
                                   {!isLastTile && (
                                     <button
                                       onClick={() => {
@@ -1738,14 +1715,27 @@ const HomeContent = () => {
                                         height: '100%'
                                       }}
                                     >
-                                      👉
+                                      <Image
+                                        src="/icons/right_caret.png"
+                                        alt="Previous"
+                                        width={15}
+                                        height={40}
+                                        style={{
+                                          filter: 'drop-shadow(0px 2px 8px rgba(0, 0, 0, 1))',
+                                          transition: 'filter 0.2s ease-in-out'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                          e.currentTarget.style.filter = 'drop-shadow(0px 3px 3px rgba(0, 0, 0, 0.35))';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                          e.currentTarget.style.filter = 'drop-shadow(0px 2px 2px rgba(0, 0, 0, 0.25))';
+                                        }}
+                                      />
                                     </button>
                                   )}
                                 </div>
                               </div>
                             )}
-
-
                             <h2 style={{
                               fontSize: "1.3rem",
                               fontWeight: "bold",
@@ -2099,7 +2089,6 @@ const HomeContent = () => {
                         );
                       })}
                     </div>
-                  </div>
                 </div>
               </div>
             )}
