@@ -42,12 +42,9 @@ export async function GET(request: Request) {
     
     // Determine the correct route prefix
     let routePrefix = 'MTA NYCT';
-    if (/^(BM|QM|BXM)/.test(routeId.toUpperCase())) {
+    if (/^(BM|QM|BXM|Q)/.test(routeId.toUpperCase())) {
       routePrefix = 'MTABC';
     } else if (/^X\d+/.test(routeId.toUpperCase())) {
-      routePrefix = 'MTA NYCT';
-    } else if (/^Q\d+/.test(routeId.toUpperCase())) {
-      // Q buses are MTA NYCT unless they're QM (which is handled above)
       routePrefix = 'MTA NYCT';
     }
 

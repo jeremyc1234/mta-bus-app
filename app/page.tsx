@@ -10,6 +10,7 @@ import { BUS_STOP_LOCATIONS } from "./data/busstops";
 import { useLocation } from "./locationContext";
 import ScrollableTile from "./scrollableTile";
 import Header from "./header";
+import RouteMapPopup from "./routeMapPopup";
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -133,7 +134,7 @@ const HomeContent = () => {
     setIsMapPopupOpen(true);
     document.body.classList.add('no-scroll');
   };
-
+  
   const closeRouteMapPopup = () => {
     setSelectedRouteId(null);
     setIsMapPopupOpen(false);
@@ -1565,7 +1566,7 @@ const HomeContent = () => {
                               zIndex: 100,
                               cursor: 'pointer',
                               width: '24px',
-                              height: '24px',
+                              height: '48px',
                               filter: 'drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.5))'
                             }}
                             onClick={() => {
@@ -1587,7 +1588,7 @@ const HomeContent = () => {
                               zIndex: 100,
                               cursor: 'pointer',
                               width: '24px',
-                              height: '24px',
+                              height: '48px',
                               filter: 'drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.5))'
                             }}
                             onClick={() => {
@@ -1823,9 +1824,14 @@ const HomeContent = () => {
                                         justifyContent: 'center',
                                         gap: '8px'
                                       }}
-                                      onClick={() => {
-                                        setSelectedRoute(routeName);
-                                        // openRouteMapPopup(routeName);
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        console.log('Route clicked:', routeName);
+                                        setSelectedRouteId(routeName);
+                                        console.log('selectedRouteId set to:', routeName);
+                                        setIsMapPopupOpen(true);
+                                        console.log('isMapPopupOpen set to true');
+                                        document.body.classList.add('no-scroll');
                                       }}
                                     >
                                       {routeName}
@@ -2100,6 +2106,13 @@ const HomeContent = () => {
               </div>
             )}
           </BusContent>
+          {/* {isMapPopupOpen && selectedRouteId && (
+  console.log('Rendering popup with routeId:', selectedRouteId),
+  <RouteMapPopup
+    routeId={selectedRouteId}
+    onClose={closeRouteMapPopup}
+  />
+)} */}
         </BusPopupProvider>
       </div>
     </Suspense>

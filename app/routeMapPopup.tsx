@@ -1,15 +1,13 @@
-"use client";
+import React, { useEffect, useState, useRef } from 'react';
+import { X } from 'lucide-react';
+import L, { LatLngExpression, LatLngBounds, LatLngTuple } from 'leaflet';
 
-import React, { useEffect, useState } from 'react';
-import dynamic from 'next/dynamic';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
-
-// Dynamically import Leaflet components for SSR compatibility
-const MapContainer = dynamic(() => import('react-leaflet').then((mod) => mod.MapContainer), { ssr: false });
-const TileLayer = dynamic(() => import('react-leaflet').then((mod) => mod.TileLayer), { ssr: false });
-const Polyline = dynamic(() => import('react-leaflet').then((mod) => mod.Polyline), { ssr: false });
-const Marker = dynamic(() => import('react-leaflet').then((mod) => mod.Marker), { ssr: false });
+interface Stop {
+  id: string;
+  name: string;
+  lat: number;
+  lon: number;
+}
 
 interface RouteMapPopupProps {
   routeId: string;
@@ -17,52 +15,104 @@ interface RouteMapPopupProps {
 }
 
 const RouteMapPopup: React.FC<RouteMapPopupProps> = ({ routeId, onClose }) => {
-  const [routePath, setRoutePath] = useState<[number, number][]>([]);
-  const [busLocations, setBusLocations] = useState<{ lat: number; lon: number; id: string }[]>([]);
+  const [stops, setStops] = useState<Stop[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const mapContainer = useRef<HTMLDivElement>(null);
 
-  /** Fetch route path from the API */
-  const fetchRoutePath = async () => {
-    try {
-      const response = await fetch(`/api/routepath?routeId=${routeId}`);
-      if (!response.ok) throw new Error(`Route Path API Error: ${response.status}`);
-      const data = await response.json();
-      setRoutePath(data.path || []);
-    } catch (error) {
-      console.error('Failed to fetch route path:', error);
-      setError('Failed to load route path. Please try again later.');
-    }
-  };
-
-  /** Fetch bus locations from the API */
-  const fetchBusLocations = async () => {
-    try {
-      const response = await fetch(`/api/buslocations?routeId=${routeId}`);
-      if (!response.ok) throw new Error(`Bus API Error: ${response.status}`);
-      const data = await response.json();
-      setBusLocations(data.buses || []);
-    } catch (error) {
-      console.error('Failed to fetch bus locations:', error);
-      setError('Failed to load bus locations. Please try again later.');
-    }
-  };
-
-  /** Fetch route and bus data on mount */
   useEffect(() => {
-    const fetchRouteData = async () => {
-      await Promise.all([fetchRoutePath(), fetchBusLocations()]);
+    let map: L.Map | null = null;
+    let markers: L.Marker[] = [];
+
+    const initializeMap = async () => {
+      try {
+        setLoading(true);
+        
+        const response = await fetch(`/api/buslocations/map?routeId=${encodeURIComponent(routeId)}`);
+        console.log('Response status:', response.status);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch route data: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        // Process and set stops
+        if (!data.stops || !Array.isArray(data.stops)) {
+          throw new Error('Invalid stops data received');
+        }
+
+        setStops(data.stops);
+
+        // Initialize map
+        if (mapContainer.current && data.stops.length > 0) {
+          const firstStop = data.stops[0];
+          const initialBounds = new L.LatLngBounds([firstStop.lat, firstStop.lon]);
+
+          const bounds = data.stops.reduce(
+            (acc: { extend: (arg0: L.LatLngTuple) => any; }, stop: { lat: number; lon: number; }) => acc.extend([stop.lat, stop.lon] as LatLngTuple),
+            initialBounds
+          );
+
+          map = L.map(mapContainer.current).fitBounds(bounds);
+
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+          }).addTo(map);
+
+          data.stops.forEach((stop: { lat: number; lon: number; name: any; }, index: number) => {
+            const marker = L.marker([stop.lat, stop.lon] as LatLngTuple)
+              .addTo(map!)
+              .bindPopup(`<b>Stop ${index + 1}:</b> ${stop.name}`);
+            markers.push(marker);
+          });
+
+          const routeCoords: LatLngTuple[] = data.stops.map(
+            (stop: { lat: number; lon: number; }) => [stop.lat, stop.lon] as LatLngTuple
+          );
+          L.polyline(routeCoords, { color: 'blue', weight: 3 }).addTo(map);
+        }
+
+        setLoading(false);
+      } catch (error) {
+        console.error('Error:', error);
+        setError(error instanceof Error ? error.message : 'An error occurred');
+        setLoading(false);
+      }
     };
-    fetchRouteData();
+
+    // Load Leaflet CSS and JavaScript
+    const loadLeaflet = async () => {
+      // Add Leaflet CSS
+      const cssLink = document.createElement('link');
+      cssLink.rel = 'stylesheet';
+      cssLink.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(cssLink);
+
+      // Add Leaflet JS
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.onload = initializeMap;
+      document.head.appendChild(script);
+    };
+
+    loadLeaflet();
+
+    // Cleanup
+    return () => {
+      if (map) {
+        map.remove();
+      }
+      markers.forEach(marker => {
+        if (marker) {
+          marker.remove();
+        }
+      });
+    };
   }, [routeId]);
 
-  /** Custom Marker Icon */
-  const busIcon = L.divIcon({
-    className: 'custom-icon',
-    html: `<div style="background: yellow; border-radius: 50%; width: 12px; height: 12px;"></div>`,
-  });
-
   return (
-    <div
+    <div 
       style={{
         position: 'fixed',
         top: 0,
@@ -70,65 +120,113 @@ const RouteMapPopup: React.FC<RouteMapPopupProps> = ({ routeId, onClose }) => {
         right: 0,
         bottom: 0,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        zIndex: 3000,
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
+        zIndex: 9999,
+        padding: '20px'
       }}
-      onClick={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
-      <div
+      <div 
         style={{
           backgroundColor: 'white',
-          borderRadius: '10px',
-          width: '90%',
+          borderRadius: '12px',
+          width: '100%',
           maxWidth: '800px',
           height: '80vh',
-          overflow: 'hidden',
           position: 'relative',
-          zIndex: 3001,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <button
-          onClick={onClose}
-          style={{
-            position: 'absolute',
-            top: '10px',
-            right: '10px',
-            zIndex: 3002,
-            backgroundColor: '#ff4d4f',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            padding: '5px 10px',
-          }}
-        >
-          Close
-        </button>
-        {error ? (
-          <div style={{ textAlign: 'center', marginTop: '20px', color: 'red' }}>{error}</div>
-        ) : (
-          <MapContainer
-            key={routeId} // Use routeId for unique map instance
-            center={[40.7128, -74.006]}
-            zoom={13}
-            style={{ width: '100%', height: '100%' }}
+        {/* Header */}
+        <div style={{
+          padding: '16px',
+          borderBottom: '1px solid #eee',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>Route {routeId} Map</h2>
+          <button 
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '8px'
+            }}
           >
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            {routePath.length > 0 && (
-              <Polyline positions={routePath} color="blue" />
-            )}
-            {busLocations.map((bus) => (
-              <Marker
-                key={bus.id}
-                position={[bus.lat, bus.lon]}
-                icon={busIcon}
-              />
+            <X size={24} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+          {loading ? (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              height: '100%'
+            }}>
+              <div style={{
+                border: '4px solid #f3f3f3',
+                borderTop: '4px solid #3498db',
+                borderRadius: '50%',
+                width: '40px',
+                height: '40px',
+                animation: 'spin 1s linear infinite'
+              }} />
+            </div>
+          ) : error ? (
+            <div style={{
+              padding: '20px',
+              color: '#e74c3c',
+              textAlign: 'center'
+            }}>
+              <p>Error: {error}</p>
+            </div>
+          ) : (
+            <div 
+              ref={mapContainer} 
+              style={{ 
+                width: '100%', 
+                height: '100%'
+              }}
+            />
+          )}
+        </div>
+
+        {/* Stops List */}
+        <div style={{
+          maxHeight: '200px',
+          overflowY: 'auto',
+          borderTop: '1px solid #eee',
+          padding: '16px'
+        }}>
+          <h3 style={{ marginBottom: '8px', fontWeight: 'bold' }}>Stops:</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {stops.map((stop, index) => (
+              <div 
+                key={stop.id}
+                style={{
+                  padding: '8px',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '4px',
+                  fontSize: '0.9rem'
+                }}
+              >
+                <strong>{index + 1}.</strong> {stop.name}
+              </div>
             ))}
-          </MapContainer>
-        )}
+          </div>
+        </div>
       </div>
     </div>
   );
