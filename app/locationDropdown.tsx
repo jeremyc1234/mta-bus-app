@@ -495,58 +495,58 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
     "One World Trade Center...",
     "Search for an address..."
   ];
-  const ClearIndicatorComponent: React.ComponentType<ClearIndicatorProps<LocationSelectOption, false, GroupBase<LocationSelectOption>>> = () => (
+  const ClearIndicatorComponent: React.ComponentType<ClearIndicatorProps<LocationSelectOption, false, GroupBase<LocationSelectOption>>> = (props) => (
     <div
-      style={{
-        cursor: "pointer",
-        padding: "0 8px",
-        fontSize: "1.2rem",
-        color: "#888",
-      }}
-      title="Clear"
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-      }}
+        {...props.innerProps}
+        style={{
+            cursor: "pointer",
+            padding: "0 8px",
+            fontSize: "1.2rem",
+            color: "#888",
+        }}
+        title="Clear"
+        onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleInputChange("", { action: "clear" }); // Trigger the clear action
+        }}
     >
-      ×
+        ×
     </div>
-  );
+);
   useEffect(() => {
     if (isUsingGeolocation || selectedValue) {
       setIsTyping(false);
       return;
     }
 
-    let typingTimer: NodeJS.Timeout;
-    
-    if (isTyping) {
-      typingTimer = setTimeout(() => {
-        if (isDeleting) {
-          // Deleting text
-          if (currentCharIndex > 0) {
-            setAnimatedPlaceholder(placeholderTexts[currentTextIndex].slice(0, currentCharIndex - 1));
-            setCurrentCharIndex(prev => prev - 1);
-          } else {
-            setIsDeleting(false);
-            setCurrentTextIndex((prev) => (prev + 1) % placeholderTexts.length);
-          }
-        } else {
-          // Typing text
-          if (currentCharIndex < placeholderTexts[currentTextIndex].length) {
-            setAnimatedPlaceholder(placeholderTexts[currentTextIndex].slice(0, currentCharIndex + 1));
-            setCurrentCharIndex(prev => prev + 1);
-          } else {
-            // Pause at the end of typing before starting to delete
-            setTimeout(() => {
-              setIsDeleting(true);
-            }, 1000);
-          }
-        }
-      }, isDeleting ? 50 : 100); // Faster deletion, slower typing
-    }
-
-    return () => clearTimeout(typingTimer);
+      if (!isTyping) return;
+  
+      let typingTimer: NodeJS.Timeout;
+      if (isTyping) {
+          typingTimer = setTimeout(() => {
+              if (isDeleting) {
+                  if (currentCharIndex > 0) {
+                      setAnimatedPlaceholder(placeholderTexts[currentTextIndex].slice(0, currentCharIndex - 1));
+                      setCurrentCharIndex((prev) => prev - 1);
+                  } else {
+                      setIsDeleting(false);
+                      setCurrentTextIndex((prev) => (prev + 1) % placeholderTexts.length);
+                  }
+              } else {
+                  if (currentCharIndex < placeholderTexts[currentTextIndex].length) {
+                      setAnimatedPlaceholder(placeholderTexts[currentTextIndex].slice(0, currentCharIndex + 1));
+                      setCurrentCharIndex((prev) => prev + 1);
+                  } else {
+                      setTimeout(() => {
+                          setIsDeleting(true);
+                      }, 1000);
+                  }
+              }
+          }, isDeleting ? 50 : 100);
+      }
+  
+      return () => clearTimeout(typingTimer);
   }, [isTyping, currentCharIndex, currentTextIndex, isDeleting, placeholderTexts, isUsingGeolocation, selectedValue]);
 
   // Set initial value based on geolocation status
@@ -637,15 +637,22 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
   }, [inputValue]);
 
   const handleInputChange = (newVal: string, { action }: { action: string }) => {
-    if (action === "input-change" && !isUsingGeolocation) {
-      setInputValue(newVal);
-      setMenuIsOpen(true);
+    if (action === "input-change") {
+        setInputValue(newVal);
+        setMenuIsOpen(true); // Open the dropdown when input changes
     } else if (action === "clear") {
-      setInputValue("");
-      setSelectedValue(null);
-      setMenuIsOpen(true);
+        setInputValue(""); // Clear the input value
+        setSelectedValue(null); // Clear the selected value
+        setMenuIsOpen(false); // Close the menu
+        onLocationChange({ lat: null, lon: null }); // Notify the parent component
+        localStorage.removeItem('selectedLocation'); // Clear saved location if applicable
+
+        setIsTyping(false); // Stop typing animation
+        setTimeout(() => {
+            setIsTyping(true); // Restart typing animation after a short delay
+        }, 100); // Add a slight delay to ensure a visual reset
     }
-  };
+};
 
   const handleSelectChange = async (selectedOption: LocationSelectOption | null) => {
   if (selectedOption) {
@@ -683,9 +690,10 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
     }, 1000);
   } else {
     // Handle clearing the selection
-    setSelectedValue(null);
-    setInputValue('');
-    localStorage.removeItem('selectedLocation');
+    setInputValue(""); // Clear the input value
+    setSelectedValue(null); // Clear the selected value
+    onLocationChange({ lat: null, lon: null }); // Notify the parent component
+    localStorage.removeItem('selectedLocation'); // Clear saved location
   }
 };
 
