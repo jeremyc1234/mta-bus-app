@@ -14,6 +14,8 @@ interface HeaderSectionProps {
     windowWidth: number;
     isLocationChanging: boolean;
     setIsLocationChanging: (value: boolean) => void;
+    isUsingGeolocation?: boolean;  // Add this prop
+    currentAddress?: string;       // Add this prop
 }
 
 const HeaderSection: React.FC<HeaderSectionProps> = ({
@@ -22,6 +24,8 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
     windowWidth,
     isLocationChanging,
     setIsLocationChanging,
+    isUsingGeolocation,
+    currentAddress,
 }) => {
     const [isIssueBannerVisible, setIsIssueBannerVisible] = useState(false);
     const [isIssueBannerFadingOut, setIsIssueBannerFadingOut] = useState(false);
@@ -87,6 +91,8 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
                                 onLocationChange={onLocationChange}
                                 isLocationChanging={isLocationChanging}
                                 setIsLocationChanging={setIsLocationChanging}
+                                isUsingGeolocation={isUsingGeolocation}
+                                currentAddress={currentAddress}
                             />
                         </Suspense>
                         <button

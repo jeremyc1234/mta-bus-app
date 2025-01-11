@@ -136,17 +136,27 @@ const BusRoutePopup = memo(({
     if (closestStopElement) {
       const rect = closestStopElement.getBoundingClientRect();
       const containerRect = scrollEl.getBoundingClientRect();
-      const isVisible = rect.top < containerRect.bottom && rect.bottom > containerRect.top;
+      const isVisible = rect.top < containerRect.bottom - 100 && rect.bottom > containerRect.top + 100;
   
       if (isVisible) {
         setStopPosition('visible');
-      } else if (rect.top < containerRect.top) {
+      } else if (rect.top <= containerRect.top + 100) {
         setStopPosition('above');
       } else {
         setStopPosition('below');
       }
     }
   }, []);
+
+  useEffect(() => {
+    const scrollEl = scrollableRef.current;
+    if (scrollEl) {
+      scrollEl.addEventListener('scroll', handleScroll);
+      // Trigger initial check
+      handleScroll({ target: scrollEl } as unknown as Event);
+      return () => scrollEl.removeEventListener('scroll', handleScroll);
+    }
+  }, [handleScroll]);
 
   useEffect(() => {
     const scrollEl = scrollableRef.current;
@@ -265,7 +275,34 @@ const BusRoutePopup = memo(({
           padding: '20px',
           borderBottom: '1px solid #eee',
           flex: 'none',
+          position: 'relative',
+          zIndex: 2,  // Add this line
         }}>
+          {stopPosition === 'above' && (
+  <div style={{
+    position: 'absolute',
+    top: '80px',
+    left: 0,
+    right: 0,
+    height: '40px',
+    background: 'linear-gradient(to bottom, rgba(0, 120, 215, 0.2), transparent)',
+    zIndex: 1,
+    pointerEvents: 'none',
+  }} />
+)}
+
+{stopPosition === 'below' && (
+  <div style={{
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '40px',
+    background: 'linear-gradient(to top, rgba(0, 120, 215, 0.2), transparent)',
+    zIndex: 1,
+    pointerEvents: 'none',
+  }} />
+)}
           <button
             onClick={onClose}
             style={{
@@ -312,14 +349,15 @@ const BusRoutePopup = memo(({
         </div>
 
         <div
-          ref={scrollableRef}
-          style={{
-            flex: '1',
-            overflowY: 'auto',
-            padding: '20px',
-            minHeight: 0,
-          }}
-        >
+      ref={scrollableRef}
+      style={{
+        flex: '1',
+        overflowY: 'auto',
+        padding: '20px',
+        minHeight: 0,
+        position: 'relative', // Add this line
+      }}
+    >
           <div style={{ display: 'flex', gap: '20px', height: 'auto', minHeight: '100%' }}>
             {!isBusBeyondStops && (
               <div style={{
@@ -474,3 +512,4 @@ export const useBusPopup = () => {
   }
   return context;
 };
+
