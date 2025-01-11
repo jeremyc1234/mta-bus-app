@@ -406,7 +406,6 @@ const handleOutsideNYC = async (lat: number, lon: number) => {
       lastFetchTimeRef.current = now;
       lastFetchRef.current = normalizedLocation;
     
-
       if (!location.lat || !location.lon) {
         console.log('⚠️ No location data available, skipping fetch');
         return;
@@ -433,7 +432,6 @@ const handleOutsideNYC = async (lat: number, lon: number) => {
           `/api/busdata?lat=${location.lat}&lon=${location.lon}`,
           { 
             signal: controller.signal,
-            // Add cache control headers
             headers: {
               'Cache-Control': 'no-cache',
               'Pragma': 'no-cache'
@@ -459,9 +457,14 @@ const handleOutsideNYC = async (lat: number, lon: number) => {
             hour12: true
           });
           setLastUpdatedTime(formattedTime);
+
+          // Move the location log here, after data is successfully fetched and set
+          console.log("🔍 Bus tiles displaying data for location:", {
+            latitude: location.lat,
+            longitude: location.lon,
+          });
         }
       } catch (err: any) {
-        // Only log aborted requests in development
         if (err.name === 'AbortError') {
           if (process.env.NODE_ENV === 'development') {
             console.log('Fetch aborted due to new request');
@@ -482,8 +485,7 @@ const handleOutsideNYC = async (lat: number, lon: number) => {
         }
       }
     };
-  
-    // Use a smaller debounce in development
+
     const debounceTime = process.env.NODE_ENV === 'development' ? 50 : 100;
     
     const timeoutId = setTimeout(() => {
@@ -494,13 +496,13 @@ const handleOutsideNYC = async (lat: number, lon: number) => {
   
     return () => {
       isActive = false;
-      // Only abort if we're not in development
       if (process.env.NODE_ENV !== 'development') {
         controller.abort();
       }
       clearTimeout(timeoutId);
     };
-  }, [debouncedLocation.lat, debouncedLocation.lon, isRefreshing]);
+}, [debouncedLocation.lat, debouncedLocation.lon, isRefreshing]);
+
 
   useEffect(() => {
     setIsMobile(window.matchMedia("(pointer: coarse)").matches);
@@ -1125,11 +1127,6 @@ const handleOutsideNYC = async (lat: number, lon: number) => {
     return () => clearTimeout(timeoutId);
   }, [tempAddress]);
   useEffect(() => {
-    console.log("🔍 Bus tiles displaying data for location:", {
-      latitude: location.lat,
-      longitude: location.lon,
-  });
-
     const ticker = setInterval(() => {
       const elapsed = (Date.now() - lastUpdateRef.current) / 1000;
       const remain = refreshInterval / 1000 - elapsed;
@@ -2022,9 +2019,9 @@ const handleOutsideNYC = async (lat: number, lon: number) => {
 }
 const Home = () => {
   return (
-    <Suspense fallback={<div></div>}>
+    // <Suspense fallback={<div></div>}>
       <HomeContent />
-    </Suspense>
+    // </Suspense>
   );
 };
 HomeContent.displayName = 'HomeContent';

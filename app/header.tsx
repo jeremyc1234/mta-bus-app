@@ -90,7 +90,7 @@ export default function Header() {
   }
 
   return (
-    <Suspense fallback={<div>Loading Header...</div>}>
+    // <Suspense fallback={<div>Loading Header...</div>}>
       <header
         style={{
           width: "100%",
@@ -304,7 +304,7 @@ export default function Header() {
 
         {pathname === "/" && (
           <div style={{ borderTop: "1px solid #e0e0e0" }}>
-            <Suspense fallback={<div>Loading Header Section...</div>}>
+            {/* <Suspense fallback={<div>Loading Header Section...</div>}> */}
               <HeaderSection
                 selectedStop={selectedStop}
                 onLocationChange={handleLocationChange}
@@ -312,10 +312,10 @@ export default function Header() {
                 isLocationChanging={isLocationChanging}
                 setIsLocationChanging={setIsLocationChanging}
               />
-            </Suspense>
+            {/* </Suspense> */}
           </div>
         )}
       </header>
-    </Suspense>
+    // </Suspense>
   );
 }
