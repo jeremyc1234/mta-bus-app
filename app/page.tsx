@@ -128,6 +128,7 @@ const HomeContent = () => {
 
   const [isMapPopupOpen, setIsMapPopupOpen] = useState(false);
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
+  const [isWaitingForGeolocation, setIsWaitingForGeolocation] = useState(true);
 
   // Open the Route Map Popup
   const openRouteMapPopup = (routeId: string) => {
@@ -221,6 +222,7 @@ const HomeContent = () => {
       const { latitude, longitude } = pos.coords;
       console.log("📱 Got geolocation update:", { latitude, longitude });
       setLocationServicesEnabled(true);
+      setIsWaitingForGeolocation(false);
   
       if (isWithinNYC(latitude, longitude)) {
         console.log("✅ Location is within NYC, using current position");
@@ -233,7 +235,7 @@ const HomeContent = () => {
     };
   
     const handleError = (error: GeolocationPositionError) => {
-      console.error("❌ Geolocation error:", error);
+      setIsWaitingForGeolocation(false);
       setDefaultLocation();
     };
   
@@ -250,6 +252,7 @@ const HomeContent = () => {
       );
     } else {
       console.log("📱 Geolocation is not available");
+      setIsWaitingForGeolocation(false);
       setDefaultLocation();
     }
   }, []);
@@ -607,47 +610,54 @@ const handleOutsideNYC = async (lat: number, lon: number) => {
       right: 0,
       bottom: 0,
       backgroundColor: "white",
-      zIndex: 1000, // Ensure it's on top
+      zIndex: 1000,
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
+      gap: "20px",
+      padding: "0 20px"
     }}>
-      <div
-        style={{
-          animation: "busDrive 1s infinite cubic-bezier(0.4, 0, 0.2, 1)"
-        }}
-      >
-
+      <p style={{ 
+        fontSize: "1.1rem",
+        lineHeight: "1.5",
+        textAlign: "right"
+      }}>
+        {isWaitingForGeolocation 
+          ? "Trying to find bus stops near you..." 
+          : "Loading bus data..."}
+      </p>
+      <div style={{
+        animation: "busDrive 1s infinite cubic-bezier(0.4, 0, 0.2, 1)"
+      }}>
         <Image
           src="/icons/bus_icon.png"
           alt="Bus Icon"
-          width={120} // Explicit width
-          height={60} // Set an appropriate height based on your design
-          priority // Optional: Preloads if it's above the fold
+          width={120}
+          height={60}
+          priority
           style={{
             objectFit: "contain",
           }}
         />
       </div>
-      <p>Loading bus data...</p>
 
       <style>
         {`
-                @keyframes busDrive {
-                    0% {
-                        transform: translateY(0);
-                        opacity: 1;
-                    }
-                    50% {
-                        transform: translateY(-15px);
-                        opacity: 0.9;
-                    }
-                    100% {
-                        transform: translateY(0);
-                        opacity: 1;
-                    }
-                }
-            `}
+          @keyframes busDrive {
+            0% {
+              transform: translateY(0);
+              opacity: 1;
+            }
+            50% {
+              transform: translateY(-15px);
+              opacity: 0.9;
+            }
+            100% {
+              transform: translateY(0);
+              opacity: 1;
+            }
+          }
+        `}
       </style>
     </div>
   );
@@ -1152,7 +1162,7 @@ const handleOutsideNYC = async (lat: number, lon: number) => {
   }
 
 
-  if (loadingState.isLoading && !loadingState.isRefreshing) {
+  if (isWaitingForGeolocation || (loadingState.isLoading && !loadingState.isRefreshing)) {
     return <LoadingAnimation />;
   }
   if (!data) {
