@@ -11,7 +11,7 @@ const TABLET_BREAKPOINT = 768;
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 0);
+  const [windowWidth, setWindowWidth] = useState(0);
   const [selectedStop, setSelectedStop] = useState<string | null>(null);
   const pathname = usePathname();
   const [isLocationChanging, setIsLocationChanging] = useState(false);
@@ -20,26 +20,28 @@ export default function Header() {
   // Handle client-side mounting
   useEffect(() => {
     setMounted(true);
+    // Only set window width after component mounts
     setWindowWidth(window.innerWidth);
-    return () => setMounted(false);
   }, []);
 
   const handleLocationChange = async (newLocation: { lat: number | null; lon: number | null }) => {
     if (newLocation.lat && newLocation.lon) {
       setIsLocationChanging(true);
-
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
       try {
         setSelectedStop(`${newLocation.lat}, ${newLocation.lon}`);
       } catch (error) {
         console.error("Error during location change:", error);
+      } finally {
+        // Reset location changing state after a delay
+        setTimeout(() => {
+          setIsLocationChanging(false);
+        }, 100);
       }
     }
   };
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!mounted) return;
 
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
@@ -50,10 +52,11 @@ export default function Header() {
 
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  }, [mounted]);
 
+  // Add animation styles after mounting
   useEffect(() => {
-    if (typeof document === 'undefined') return;
+    if (!mounted) return;
 
     const style = document.createElement("style");
     style.textContent = `
@@ -72,7 +75,7 @@ export default function Header() {
         document.head.removeChild(style);
       }
     };
-  }, []);
+  }, [mounted]);
 
   const handleHomeClick = () => {
     if (typeof sessionStorage !== 'undefined') {

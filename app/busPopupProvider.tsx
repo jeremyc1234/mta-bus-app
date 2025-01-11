@@ -278,31 +278,6 @@ const BusRoutePopup = memo(({
           position: 'relative',
           zIndex: 2,  // Add this line
         }}>
-          {stopPosition === 'above' && (
-  <div style={{
-    position: 'absolute',
-    top: '80px',
-    left: 0,
-    right: 0,
-    height: '40px',
-    background: 'linear-gradient(to bottom, rgba(0, 120, 215, 0.2), transparent)',
-    zIndex: 1,
-    pointerEvents: 'none',
-  }} />
-)}
-
-{stopPosition === 'below' && (
-  <div style={{
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: '40px',
-    background: 'linear-gradient(to top, rgba(0, 120, 215, 0.2), transparent)',
-    zIndex: 1,
-    pointerEvents: 'none',
-  }} />
-)}
           <button
             onClick={onClose}
             style={{

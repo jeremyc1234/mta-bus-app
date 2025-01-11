@@ -26,7 +26,10 @@ const isWithinNYC = (lat: number, lon: number) => {
     lon >= NYC_BOUNDS.west &&
     lon <= NYC_BOUNDS.east;
 };
-
+const UNION_SQUARE = {
+  lat: 40.7359,
+  lon: -73.9906
+};
 interface DropdownProps {
   isOpen: boolean;
   onClose: () => void;
@@ -188,36 +191,6 @@ const HomeContent = () => {
     }
   };
 
-  useEffect(() => {
-    if (location.lat && location.lon) {
-      // Store location in sessionStorage
-      localStorage.setItem("savedLat", location.lat.toString());
-      localStorage.setItem("savedLon", location.lon.toString());
-    }
-  }, [location.lat, location.lon]);
-  const fallbackLocation = () => {
-    // console.log("🔍 Checking for saved location in fallbackLocation...");
-    const savedLat = localStorage.getItem("savedLat");
-    const savedLon = localStorage.getItem("savedLon");
-
-    if (savedLat && savedLon) {
-      const latNum = parseFloat(savedLat);
-      const lonNum = parseFloat(savedLon);
-      if (!isNaN(latNum) && !isNaN(lonNum)) {
-        console.log("✅ Using saved location:", { lat: latNum, lon: lonNum });
-        setLocation({ lat: latNum, lon: lonNum });
-        setLocationServicesEnabled(false);
-        return true;
-      }
-      console.log("❌ Saved coordinates are invalid:", { savedLat, savedLon });
-    } else {
-      console.log("❌ No saved location found in localStorage");
-    }
-
-    console.log("⚠️ Falling back to Union Square in fallbackLocation");
-    setDefaultLocation();
-    return false;
-  };
   const checkScrollable = () => {
     const el = scrollContainerRef.current;
     // console.log('🛠️ checkScrollable Triggered');
@@ -239,6 +212,7 @@ const HomeContent = () => {
       console.warn('⚠️ scrollContainerRef is null in checkScrollable');
     }
   };
+
   // Add this useEffect to page.tsx
   useEffect(() => {
     console.log("🚀 Starting geolocation initialization...");
@@ -252,56 +226,30 @@ const HomeContent = () => {
         console.log("✅ Location is within NYC, using current position");
         setLocation({ lat: latitude, lon: longitude });
         setIsOutsideNYC(false);
-        localStorage.setItem("savedLat", String(latitude));
-        localStorage.setItem("savedLon", String(longitude));
       } else {
-        console.log("🌎 Location is outside NYC");
+        console.log("🌎 Location is outside NYC, falling back to Union Square");
         handleOutsideNYC(latitude, longitude);
       }
     };
   
     const handleError = (error: GeolocationPositionError) => {
       console.error("❌ Geolocation error:", error);
-      const savedLat = localStorage.getItem("savedLat");
-      const savedLon = localStorage.getItem("savedLon");
-  
-      if (savedLat && savedLon) {
-        const lat = parseFloat(savedLat);
-        const lon = parseFloat(savedLon);
-        if (!isNaN(lat) && !isNaN(lon)) {
-          console.log("✅ Using saved location from localStorage:", { lat, lon });
-          setLocation({ lat, lon });
-          return;
-        }
-      }
-  
-      console.log("⚠️ No valid saved location found, falling back to default.");
       setDefaultLocation();
     };
   
     if ("geolocation" in navigator) {
       console.log("📱 Geolocation is available");
-      navigator.geolocation.getCurrentPosition(handlePositionUpdate, handleError, {
-        maximumAge: 30000,
-        timeout: 27000,
-        enableHighAccuracy: false,
-      });
+      navigator.geolocation.getCurrentPosition(
+        handlePositionUpdate,
+        handleError,
+        {
+          maximumAge: 30000,
+          timeout: 27000,
+          enableHighAccuracy: false,
+        }
+      );
     } else {
       console.log("📱 Geolocation is not available");
-      const savedLat = localStorage.getItem("savedLat");
-      const savedLon = localStorage.getItem("savedLon");
-  
-      if (savedLat && savedLon) {
-        const lat = parseFloat(savedLat);
-        const lon = parseFloat(savedLon);
-        if (!isNaN(lat) && !isNaN(lon)) {
-          console.log("✅ Using saved location from localStorage:", { lat, lon });
-          setLocation({ lat, lon });
-          return;
-        }
-      }
-  
-      console.log("⚠️ Falling back to default location.");
       setDefaultLocation();
     }
   }, []);
@@ -384,35 +332,31 @@ const HomeContent = () => {
   };
 
   const setDefaultLocation = () => {
-    const defaultLocation = BUS_STOP_LOCATIONS[0];
-    if (defaultLocation.lat !== null && defaultLocation.lon !== null) {
-      setLocation({
-        lat: defaultLocation.lat,
-        lon: defaultLocation.lon
-      });
-      setSelectedStop(defaultLocation.label);
-    }
+    // Always use Union Square coordinates
+    setLocation({
+      lat: UNION_SQUARE.lat,
+      lon: UNION_SQUARE.lon
+    });
+    setSelectedStop("Union Square");
   };
+  
 
-  const handleOutsideNYC = async (lat: number, lon: number) => {
-    console.log("Outside NYC coords:", lat, lon);
-    setIsOutsideNYC(true); // Set the outside NYC state
+  
+const handleOutsideNYC = async (lat: number, lon: number) => {
+  console.log("Outside NYC coords:", lat, lon);
+  setIsOutsideNYC(true);
 
-    // Get the location name
-    const locationName = await getAddressFromCoords(lat, lon);
-    if (locationName) {
-      setUserLocation(locationName);
-    }
+  const locationName = await getAddressFromCoords(lat, lon);
+  if (locationName) {
+    setUserLocation(locationName);
+  }
 
-    // Only revert if we have no saved geo
-    const savedLat = localStorage.getItem("savedLat");
-    const savedLon = localStorage.getItem("savedLon");
-    const hasSavedLocation = savedLat && savedLon;
-
-    if (!hasSavedLocation) {
-      setDefaultLocation(); // fallback to Union Square
-    }
-  };
+  // Explicitly use Union Square coordinates
+  setLocation({
+    lat: UNION_SQUARE.lat,
+    lon: UNION_SQUARE.lon
+  });
+};
 
 
   const handleLocationError = () => {

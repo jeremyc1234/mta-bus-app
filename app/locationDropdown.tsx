@@ -564,37 +564,16 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
       });
     }
   }, [isUsingGeolocation, currentAddress]);
-  
-  // Add cleanup listener for page unload
-  useEffect(() => {
-    const handleUnload = () => {
-      localStorage.removeItem('selectedLocation');
-      localStorage.removeItem('savedLat');
-      localStorage.removeItem('savedLon');
-      localStorage.removeItem('dropdownInputValue');
-      localStorage.removeItem('lastLocationUpdate');
-    };
-
-    window.addEventListener('beforeunload', handleUnload);
-    return () => window.removeEventListener('beforeunload', handleUnload);
-  }, []);
-
-  useEffect(() => {
-  const savedLocation = localStorage.getItem('selectedLocation');
-  if (savedLocation) {
-    try {
-      const parsed = JSON.parse(savedLocation);
-      setSelectedValue(parsed);
-      setInputValue(parsed.label);
-    } catch (e) {
-      console.error('Error parsing saved location:', e);
-    }
-  }
-}, []);
 
   useEffect(() => {
     onLocationChangeRef.current = onLocationChange;
   }, [onLocationChange]);
+
+  useEffect(() => {
+    if (selectedValue) {
+        setInputValue(selectedValue.label);
+    }
+}, [selectedValue]);
 
   useEffect(() => {
     const fetchSuggestions = async () => {
@@ -638,23 +617,28 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
 
   const handleInputChange = (newVal: string, { action }: { action: string }) => {
     if (action === "input-change") {
-        setInputValue(newVal);
-        setMenuIsOpen(true); // Open the dropdown when input changes
+        // Only update input value and show menu if user is actually typing
+        if (newVal !== selectedValue?.label) {
+            setInputValue(newVal);
+            setMenuIsOpen(true);
+            setIsTyping(false); // Stop the animation when typing
+        }
     } else if (action === "clear") {
         setInputValue(""); // Clear the input value
         setSelectedValue(null); // Clear the selected value
         setMenuIsOpen(false); // Close the menu
         onLocationChange({ lat: null, lon: null }); // Notify the parent component
-        localStorage.removeItem('selectedLocation'); // Clear saved location if applicable
+        localStorage.removeItem('selectedLocation'); // Clear saved location
 
-        setIsTyping(false); // Stop typing animation
-        setTimeout(() => {
-            setIsTyping(true); // Restart typing animation after a short delay
-        }, 100); // Add a slight delay to ensure a visual reset
+        // Reset animation state
+        setCurrentCharIndex(0);
+        setCurrentTextIndex(0);
+        setIsDeleting(false);
+        setIsTyping(true); // Start the animation again
     }
 };
 
-  const handleSelectChange = async (selectedOption: LocationSelectOption | null) => {
+const handleSelectChange = async (selectedOption: LocationSelectOption | null) => {
   if (selectedOption) {
     const now = Date.now();
     if (now - lastUpdateRef.current < THROTTLE_MS) {
@@ -677,13 +661,11 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
     };
     
     setSelectedValue(formattedOption);  // Use the formatted option
-    setInputValue(selectedOption.label);
+    setInputValue(selectedOption.label); // Set the input value
+    setIsTyping(false); // Stop the animation
     setLocation({ lat: normalizedLat, lon: normalizedLon });
     onLocationChangeRef.current({ lat: normalizedLat, lon: normalizedLon });
     setIsLocationChanging(true);
-    
-    // Store the selection in localStorage
-    localStorage.setItem('selectedLocation', JSON.stringify(formattedOption));
     
     setTimeout(() => {
       setIsLocationChanging(false);
@@ -692,8 +674,8 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
     // Handle clearing the selection
     setInputValue(""); // Clear the input value
     setSelectedValue(null); // Clear the selected value
+    setIsTyping(true); // Restart the animation
     onLocationChange({ lat: null, lon: null }); // Notify the parent component
-    localStorage.removeItem('selectedLocation'); // Clear saved location
   }
 };
 
@@ -729,6 +711,11 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
       whiteSpace: 'nowrap',
       overflow: 'hidden',
       textOverflow: 'ellipsis'
+    }),singleValue: (provided: any) => ({    // Added this style
+      ...provided,
+      color: 'black',
+      marginLeft: '2px',
+      maxWidth: 'calc(100% - 8px)'
     })
   };
 
