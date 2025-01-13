@@ -445,18 +445,12 @@
 
 // export default React.memo(LocationDropdown);
 
+// NEW LOCATION DROPDOWN
+
 import React, { useState, useEffect, useRef } from 'react';
 import Select, { ClearIndicatorProps, GroupBase } from 'react-select'; // Add these imports
 import { useLocation } from './locationContext';
-
-const NEXT_PUBLIC_GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-
-declare global {
-  interface Window {
-    google: any;
-    initGoogleAutocomplete: () => void;
-  }
-}
+import { BUS_STOP_LOCATIONS } from './data/busstops';
 
 interface LocationSelectOption {
   value: {
@@ -472,9 +466,8 @@ interface LocationDropdownProps {
   onLocationChange: (newLocation: { lat: number | null; lon: number | null }) => void;
   isLocationChanging: boolean;
   setIsLocationChanging: (value: boolean) => void;
-  isUsingGeolocation?: boolean;
-  currentAddress?: string;
-  googleMapsApiKey?: string; // Make it optional
+  isUsingGeolocation?: boolean;  // New prop to indicate if using geolocation
+  currentAddress?: string;       // New prop for current address when using geolocation
 }
 
 const LocationDropdown: React.FC<LocationDropdownProps> = ({
@@ -482,13 +475,13 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
   isLocationChanging,
   setIsLocationChanging,
   isUsingGeolocation = false,
-  currentAddress,
-  googleMapsApiKey
+  currentAddress
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [selectedValue, setSelectedValue] = useState<LocationSelectOption | null>(null);
   const [addressSuggestions, setAddressSuggestions] = useState<Array<LocationSelectOption>>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [filteredLocations, setFilteredLocations] = useState<Array<LocationSelectOption>>([]);
   const [menuIsOpen, setMenuIsOpen] = useState(false);
   const lastUpdateRef = useRef<number>(0);
   const THROTTLE_MS = 1000;
@@ -499,8 +492,16 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
   const [currentCharIndex, setCurrentCharIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
-  const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
-  const placesService = useRef<google.maps.places.PlacesService | null>(null);
+  const busStopOptions = BUS_STOP_LOCATIONS.map(stop => ({
+    value: {
+      lat: stop.lat,
+      lon: stop.lon,
+      label: stop.label
+    },
+    label: stop.label,
+    isCustomAddress: false,
+    group: 'Popular Locations'
+  }));
   
   const placeholderTexts = [
     "30 Rockefeller Plaza...",
@@ -561,7 +562,16 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
   
       return () => clearTimeout(typingTimer);
   }, [isTyping, currentCharIndex, currentTextIndex, isDeleting, placeholderTexts, isUsingGeolocation, selectedValue]);
-
+  useEffect(() => {
+    if (inputValue.length > 0) {
+      const filtered = busStopOptions.filter(option =>
+        option.label.toLowerCase().includes(inputValue.toLowerCase())
+      );
+      setFilteredLocations(filtered);
+    } else {
+      setFilteredLocations([]);
+    }
+  }, [inputValue]);
   // Set initial value based on geolocation status
   useEffect(() => {
     if (isUsingGeolocation && currentAddress) {
@@ -577,124 +587,22 @@ const LocationDropdown: React.FC<LocationDropdownProps> = ({
       });
     }
   }, [isUsingGeolocation, currentAddress]);
+
   useEffect(() => {
-    const loadGoogleMapsScript = () => {
-      // Only load Google Maps if API key is provided
-      if (!googleMapsApiKey) {
-        console.warn('No Google Maps API key provided, falling back to OpenStreetMap');
-        return;
-      }
-  
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places&callback=initGoogleAutocomplete`;
-      script.async = true;
-      script.defer = true;
-      
-      window.initGoogleAutocomplete = () => {
+    onLocationChangeRef.current = onLocationChange;
+  }, [onLocationChange]);
+
+  useEffect(() => {
+    if (selectedValue) {
+        setInputValue(selectedValue.label);
+    }
+}, [selectedValue]);
+
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (inputValue.length > 3 && inputValue !== "Your current location") {
+        setIsLoading(true);
         try {
-          autocompleteService.current = new window.google.maps.places.AutocompleteService();
-          placesService.current = new window.google.maps.places.PlacesService(
-            document.createElement('div')
-          );
-        } catch (error) {
-          console.error('Error initializing Google Places:', error);
-        }
-      };
-  
-      document.head.appendChild(script);
-    };
-  
-    if (!window.google && googleMapsApiKey) {
-      loadGoogleMapsScript();
-    }
-  
-    // Cleanup
-    return () => {
-      if (googleMapsApiKey) {
-        const script = document.querySelector(
-          `script[src^="https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}"]`
-        );
-        if (script) {
-          script.remove();
-        }
-      }
-    };
-  }, [googleMapsApiKey]);
-
-const getPlaceDetails = (placeId: string): Promise<LocationSelectOption> => {
-  return new Promise((resolve, reject) => {
-    if (!placesService.current) {
-      reject(new Error('Places service not initialized'));
-      return;
-    }
-
-    const request: google.maps.places.PlaceDetailsRequest = {
-      placeId: placeId,
-      fields: ['geometry', 'formatted_address', 'name']
-    };
-
-    placesService.current.getDetails(
-      {
-        placeId: placeId,
-        fields: ['geometry', 'formatted_address', 'name']
-      },
-      (place: any, status: string) => {
-        if (status === 'OK') {
-          resolve({
-            value: {
-              lat: place.geometry.location.lat(),
-              lon: place.geometry.location.lng(),
-              label: place.formatted_address
-            },
-            label: place.formatted_address,
-            isCustomAddress: true
-          });
-        } else {
-          reject(new Error('Failed to get place details'));
-        }
-      }
-    );
-  });
-};
-
-useEffect(() => {
-  const fetchSuggestions = async () => {
-    if (inputValue.length > 3 && inputValue !== "Your current location") {
-      setIsLoading(true);
-      try {
-        if (googleMapsApiKey && autocompleteService.current) {
-          // Use Google Places
-          const autocompleteRequest: google.maps.places.AutocompletionRequest = {
-            input: inputValue,
-            componentRestrictions: { country: 'us' },
-            location: new google.maps.LatLng(40.7128, -74.0060),
-            radius: 50000,
-            types: ['address', 'establishment']
-          };
-
-          autocompleteService.current.getPlacePredictions(
-            autocompleteRequest,
-            async (predictions, status) => {
-              if (status === google.maps.places.PlacesServiceStatus.OK && predictions && placesService.current) {
-                try {
-                  const detailedPredictions = await Promise.all(
-                    predictions.slice(0, 5).map(prediction => 
-                      getPlaceDetails(prediction.place_id)
-                    )
-                  );
-                  setAddressSuggestions(detailedPredictions);
-                } catch (error) {
-                  console.error('Error processing predictions:', error);
-                  setAddressSuggestions([]);
-                }
-              } else {
-                setAddressSuggestions([]);
-              }
-              setIsLoading(false);
-            }
-          );
-        } else {
-          // Fallback to OpenStreetMap
           const response = await fetch(
             `https://nominatim.openstreetmap.org/search?` +
             new URLSearchParams({
@@ -716,21 +624,19 @@ useEffect(() => {
             isCustomAddress: true
           }));
           setAddressSuggestions(suggestions);
+        } catch (error) {
+          console.error('Error fetching suggestions:', error);
+        } finally {
+          setIsLoading(false);
         }
-      } catch (error) {
-        console.error('Error fetching suggestions:', error);
+      } else {
         setAddressSuggestions([]);
-      } finally {
-        setIsLoading(false);
       }
-    } else {
-      setAddressSuggestions([]);
-    }
-  };
+    };
 
-  const timeoutId = setTimeout(fetchSuggestions, 300);
-  return () => clearTimeout(timeoutId);
-}, [inputValue, googleMapsApiKey]);
+    const timeoutId = setTimeout(fetchSuggestions, 300);
+    return () => clearTimeout(timeoutId);
+  }, [inputValue]);
 
   const handleInputChange = (newVal: string, { action }: { action: string }) => {
     if (action === "input-change") {

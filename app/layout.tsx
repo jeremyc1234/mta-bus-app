@@ -3,6 +3,7 @@ import Header from './header';
 import Link from 'next/link';
 import { Providers } from './providers';
 import Script from 'next/script';
+import Head from 'next/head';
 
 const inter = Inter({ subsets: ['latin'] });
 const GTM_ID = 'GTM-MLQ6ZJX7';
@@ -10,7 +11,11 @@ const GTM_ID = 'GTM-MLQ6ZJX7';
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" style={{ margin: 0, padding: 0 }}>
-      <head>
+      <Head>
+        <title>NYC Bus Schedules | MTA Bus Finder</title>
+        <meta name="description" content="Find real-time New York City bus schedules, stop locations, and arrival times. Get accurate MTA bus tracking information for all NYC boroughs." />
+        <meta property="og:title" content="NYC Bus Schedules | MTA Bus Finder" />
+        <meta property="og:description" content="Find real-time New York City bus schedules, stop locations, and arrival times. Get accurate MTA bus tracking information for all NYC boroughs." />
         <style>
           {`
             html, body {
@@ -61,7 +66,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9527056951697290"
           crossOrigin="anonymous"
         />
-      </head>
+      </Head>
       <body
         className={inter.className}
         style={{

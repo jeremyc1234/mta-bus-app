@@ -30,7 +30,7 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
     const [isIssueBannerVisible, setIsIssueBannerVisible] = useState(false);
     const [isIssueBannerFadingOut, setIsIssueBannerFadingOut] = useState(false);
     const [mounted, setMounted] = useState(false);
-
+    const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     // Handle client-side mounting
     useEffect(() => {
         setMounted(true);
@@ -92,8 +92,7 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
                                 isLocationChanging={isLocationChanging}
                                 setIsLocationChanging={setIsLocationChanging}
                                 isUsingGeolocation={isUsingGeolocation}
-                                currentAddress={currentAddress}
-                            />
+                                currentAddress={currentAddress}                   />
                         </Suspense>
                         <button
                             onClick={() => setIsIssueBannerVisible(!isIssueBannerVisible)}
